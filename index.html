@@ -107,6 +107,8 @@ tfoot .sticky{background:var(--bg)}
 .tag.no{background:var(--red-soft);color:var(--red)}
 .tag.wait{background:var(--amber-soft);color:var(--amber)}
 .neg{color:var(--red)}
+tr.ghost td{background:color-mix(in srgb,var(--teal-soft) 35%,transparent)}
+tr.ghost input.in{background:var(--surface);border-style:dashed}
 .prov{font-size:11px;font-weight:600;color:var(--amber);text-transform:none}
 .tag.provt{outline:1.5px dashed currentColor;outline-offset:1px}
 .banner{border-radius:10px;padding:10px 14px;font-size:13.5px;margin-bottom:16px;background:var(--amber-soft);color:var(--amber)}
@@ -535,6 +537,8 @@ function tabPengaturan(pid,d,c){
   </div>`;
 }
 
+const PF = ['nama','instansi','profesi','pre','post','hadir'];
+const PF_NUM = {pre:1, post:1, hadir:1};
 function tabPeserta(pid,d,c){
   const pes = list(d.peserta);
   const rows = pes.map((p,i) => `<tr>
@@ -546,15 +550,16 @@ function tabPeserta(pid,d,c){
     <td>${inp(`peserta/${p.id}/post`, p.post, {num:true, max:100, label:'Post test'})}</td>
     <td>${inp(`peserta/${p.id}/hadir`, p.hadir, {num:true, max:100, label:'Kehadiran'})}</td>
     <td>${isP()?`<button class="btn ghost sm" data-a="pDel" data-id="${p.id}" style="color:var(--red)" aria-label="Hapus peserta">Hapus</button>`:''}</td></tr>`).join('');
+  const ghost = isP() ? `<tr class="ghost"><td class="c muted">+</td>${PF.map((f,i) => `<td><input class="in${PF_NUM[f]?' num':''}" data-new="${f}" ${i===0?'placeholder="Ketik / tempel nama baru"':''} aria-label="Peserta baru: ${f}"${PF_NUM[f]?' inputmode="decimal"':''}></td>`).join('')}<td></td></tr>` : '';
   return `<section class="panel">
     <div class="row"><div style="flex:1;min-width:240px"><h2>Data peserta</h2><p class="small muted">Diisi Panitia. Nilai 0–100, desimal boleh pakai koma. Tersimpan otomatis setelah pindah kolom.</p></div>
-    ${isP()?`<button class="btn sm" data-a="pSort">Urutkan nama A–Z</button><button class="btn primary sm" data-a="pAdd">Tambah peserta</button>`:''}</div>
-    ${pes.length ? `<div class="scroll" style="margin-top:10px"><table><thead><tr><th class="c">No</th><th>Nama lengkap</th><th>Asal instansi</th><th>Profesi</th><th class="c">Pre Test</th><th class="c">Post Test</th><th class="c">Kehadiran (%)</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
-      : '<div class="empty" style="margin-top:10px">Belum ada peserta. Tambah satu per satu, atau tempel dari Excel di bawah.</div>'}
-    ${isP()?`<details class="paste"${pes.length?'':' open'}><summary>Tempel daftar peserta dari Excel</summary>
-      <p class="small muted">Salin dari Excel dengan urutan kolom: Nama, Asal Instansi, Profesi, Pre Test, Post Test, Kehadiran. Kolom nilai boleh kosong. Peserta ditambahkan di bawah daftar.</p>
-      <textarea class="in" id="pastePes" placeholder="AGUS IKHSAN JAYADI&#9;UPT LABKESDA KOTA MATARAM&#9;ATLM&#9;76,67&#9;96,67"></textarea>
-      <button class="btn primary sm" data-a="pPaste">Tambahkan peserta</button></details>`:''}
+    ${isP()?`<button class="btn sm" data-a="pSort">Urutkan nama A–Z</button>`:''}</div>
+    ${isP()?`<div class="guide" style="position:static;margin:8px 0 14px"><b>Tempel langsung dari Excel</b>
+      <ol><li>Di Excel, blok data peserta dengan urutan kolom: <b>Nama, Asal Instansi, Profesi, Pre Test, Post Test, Kehadiran</b> (boleh hanya sebagian kolom), lalu <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+      <li>Klik kotak <b>Nama</b> di baris bertanda <b>+</b> paling bawah, lalu <kbd>Ctrl</kbd>+<kbd>V</kbd>. Semua baris langsung menjadi peserta baru.</li>
+      <li>Untuk mengisi atau memperbaiki satu kolom saja (misalnya Post Test), klik kotak di baris pertama kolom itu lalu tempel. Nilai terisi ke bawah.</li></ol></div>`:''}
+    <div class="scroll"><table><thead><tr><th class="c">No</th><th>Nama lengkap</th><th>Asal instansi</th><th>Profesi</th><th class="c">Pre Test</th><th class="c">Post Test</th><th class="c">Kehadiran (%)</th><th></th></tr></thead><tbody id="pesBody">${rows}${ghost}</tbody></table></div>
+    ${!pes.length && !isP() ? '<div class="empty" style="margin-top:10px">Belum ada peserta.</div>' : ''}
   </section>`;
 }
 
@@ -669,6 +674,8 @@ function render(){
   const open = {}; app.querySelectorAll('details.paste').forEach((dt,i) => open[i] = dt.open);
   const formVals = {}; app.querySelectorAll('form[data-form] [name]').forEach(el => formVals[el.closest('form').dataset.form+':'+el.name] = el.value);
   const aid = a && a.id === 'q' ? 'q' : null;
+  const ghostKey = a && a.dataset && a.dataset.new ? a.dataset.new : null;
+  const ghostVals = {}; app.querySelectorAll('[data-new]').forEach(el => { if (el.value) ghostVals[el.dataset.new] = el.value; });
   const focusName = a && a.name && a.closest && a.closest('form[data-form]') ? a.closest('form').dataset.form+':'+a.name : null;
   const body = (S.view==='fasil' && S.doc) ? viewFasil() : (S.view==='doc' && S.doc) ? viewPelatihan() : S.view==='new' ? viewNew() : viewHome();
   app.innerHTML = header() + body;
@@ -681,12 +688,23 @@ function render(){
       ? app.querySelector(`[data-pred="${key[4]}"][data-f="${key.slice(5)}"]`)
       : app.querySelector(`[data-k="${CSS.escape(key)}"]`);
     if (el) { el.focus(); try { el.setSelectionRange(ss, se); } catch(e){} }
+  }
+  app.querySelectorAll('[data-new]').forEach(el => { if (ghostVals[el.dataset.new] !== undefined && !S.ghostFocus) el.value = ghostVals[el.dataset.new]; });
+  if (key) { /* handled above */ } else if (S.ghostFocus) {
+    const el = S.ghostFocus === 'ghost' ? app.querySelector('[data-new="nama"]') : app.querySelector(`[data-k="${CSS.escape(S.ghostFocus)}"]`);
+    if (el) { el.focus(); S.ghostFocus = null; }
+  } else if (ghostKey) { const el = app.querySelector(`[data-new="${ghostKey}"]`); if (el) { el.focus(); try { el.setSelectionRange(ss, se); } catch(e){} }
   } else if (aid) { const el = document.getElementById(aid); if (el) { el.focus(); try { el.setSelectionRange(ss, se); } catch(e){} } }
 }
 
 /* ---------- events ---------- */
 app.addEventListener('input', e => { if (e.target.id === 'q') { S.q = e.target.value; render(); return; } const k = e.target.dataset.k; if (k) S.drafts[k] = e.target.value; });
 app.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.dataset && e.target.dataset.new) {
+    e.preventDefault(); S.enterGhost = true;
+    e.target.dispatchEvent(new Event('change', {bubbles:true}));
+    S.enterGhost = false; return;
+  }
   if (e.key === 'Enter' && e.target.matches('input.in') && !e.target.closest('form')) {
     e.preventDefault();
     let nextKey = null;
@@ -715,6 +733,15 @@ app.addEventListener('change', async e => {
       pred[i].batas = n; }
     else pred[i].label = t.value.trim() || DEF_PRED[i].label;
     t.classList.remove('bad'); upd({predikat: pred}); return;
+  }
+  if (t.dataset.new) {
+    if (t.dataset.sent === t.value) return; t.dataset.sent = t.value;
+    const f = t.dataset.new; let v = t.value.trim(); if (v === '') return;
+    if (PF_NUM[f]) { v = parseNum(v); if (v === null || Number.isNaN(v) || v < 0 || v > 100) { t.classList.add('bad'); toast('Isi angka 0 sampai 100'); return; } }
+    const id = uid('s'); const u = Math.max(0, ...list(S.doc.peserta).map(x => x.urut||0)) + 1;
+    S.ghostFocus = S.enterGhost ? 'ghost' : (f === 'nama' ? `peserta/${id}/instansi` : 'ghost');
+    upd({peserta:{[id]: {nama:'', instansi:'', profesi:'', pre:null, post:null, hadir:null, [f]: v, urut:u}}});
+    return;
   }
   const k = t.dataset.k; if (!k) return;
   if (t.dataset.sent === t.value) return; t.dataset.sent = t.value;
@@ -809,8 +836,38 @@ app.addEventListener('submit', async ev => {
   }
 });
 /* ---------- tempel kolom & tarik ke bawah ---------- */
+function pastePeserta(e){
+  const t = e.target; const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+  const lines = text.replace(/\r/g,'').split('\n'); while (lines.length && !lines[lines.length-1].trim()) lines.pop();
+  const grid = lines.map(l => l.split('\t'));
+  if (!grid.length || (grid.length === 1 && grid[0].length === 1)) return;   // satu sel: tempel biasa
+  e.preventDefault();
+  const field = t.dataset.new || t.dataset.k.split('/')[2]; const c0 = PF.indexOf(field);
+  if (c0 === 0 && /^nama/i.test((grid[0][0]||'').trim())) grid.shift();      // lewati baris judul
+  const tr = t.closest('tr'); const r0 = [...tr.parentElement.rows].indexOf(tr);
+  const pes = list(S.doc.peserta); let u = Math.max(0, ...pes.map(x => x.urut||0));
+  const patch = {peserta:{}}; let nNew = 0, nUpd = 0, bad = 0;
+  grid.forEach((cells, j) => {
+    if (cells.every(x => !x.trim())) return;
+    const ri = r0 + j; let id, obj;
+    if (ri < pes.length) { id = pes[ri].id; obj = {}; nUpd++; }
+    else { id = uid('s') + j; obj = {nama:'', instansi:'', profesi:'', pre:null, post:null, hadir:null, urut:++u}; nNew++; }
+    cells.forEach((x, k) => {
+      const f = PF[c0 + k]; if (!f) return; x = x.trim(); if (x === '') return;
+      if (PF_NUM[f]) { const v = parseNum(x); if (Number.isNaN(v) || v === null || v < 0 || v > 100) { bad++; return; } obj[f] = v; }
+      else obj[f] = x.slice(0, 300);
+      delete S.drafts[`peserta/${id}/${f}`];
+    });
+    if (ri >= pes.length && !PF.some(f => obj[f] !== '' && obj[f] !== null && obj[f] !== undefined)) { u--; nNew--; return; }
+    patch.peserta[id] = obj;
+  });
+  if (nNew || nUpd) upd(patch);
+  toast([nNew ? `${nNew} peserta baru ditambahkan` : '', nUpd ? `${nUpd} baris diperbarui` : '', bad ? `${bad} nilai bukan angka 0–100 dilewati` : ''].filter(Boolean).join(', ') || 'Tidak ada data yang ditempel');
+}
 app.addEventListener('paste', e => {
-  const t = e.target; if (!t.matches || !t.matches('input.in[data-k^="nilai/"], input.in[data-k^="peserta/"][data-t="num"]')) return;
+  const t = e.target; if (!t.matches) return;
+  if (isP() && t.closest('#pesBody') && t.matches('input.in')) { pastePeserta(e); return; }
+  if (!t.matches('input.in[data-k^="nilai/"]')) return;
   const text = (e.clipboardData || window.clipboardData).getData('text') || '';
   const lines = text.replace(/\r/g,'').split('\n'); while (lines.length && !lines[lines.length-1].trim()) lines.pop();
   if (lines.length <= 1) return;
