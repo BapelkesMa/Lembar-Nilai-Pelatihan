@@ -107,6 +107,8 @@ tfoot .sticky{background:var(--bg)}
 .tag.no{background:var(--red-soft);color:var(--red)}
 .tag.wait{background:var(--amber-soft);color:var(--amber)}
 .neg{color:var(--red)}
+.prov{font-size:11px;font-weight:600;color:var(--amber);text-transform:none}
+.tag.provt{outline:1.5px dashed currentColor;outline-offset:1px}
 .banner{border-radius:10px;padding:10px 14px;font-size:13.5px;margin-bottom:16px;background:var(--amber-soft);color:var(--amber)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}
@@ -354,13 +356,17 @@ function hitung(d){
     const vals = kom.map(k => { const v = d.nilai && d.nilai[k.id] && d.nilai[k.id][p.id]; return isNum(v)?v:null; });
     let s=0, sw=0; vals.forEach((v,j) => { if(v!==null && kom[j].w>0){ s+=v*kom[j].w; sw+=kom[j].w; } });
     const pen = sw>0 ? s/sw : null;
-    let na = null;
-    if (!((bp>0&&post===null)||(bt>0&&pen===null)||(bk>0&&had===null))) na = Math.round(((post||0)*bp + (pen||0)*bt + (had||0)*bk)*100)/100;
+    // nilai akhir dihitung dari komponen yang sudah masuk; bobot disesuaikan bila ada yang belum terisi
+    let sv = 0, sb = 0;
+    if (bp>0 && post!==null) { sv += post*bp; sb += bp; }
+    if (bt>0 && pen!==null) { sv += pen*bt; sb += bt; }
+    if (bk>0 && had!==null) { sv += had*bk; sb += bk; }
+    const na = sb>0 ? Math.round(sv/sb*100)/100 : null;
     let pi = null, predikat = '';
     if (na!==null){ pi = [1,2,3].filter(j => isNum(pred[j].batas) && pred[j].batas < na).length; predikat = pred[pi].label; }
-    const status = na===null ? '' : ((na > lulus && (hadMin===null || (had||0) >= hadMin)) ? 'Lulus' : 'Tidak Lulus');
+    const status = na===null ? '' : ((na > lulus && (hadMin===null || had===null || had >= hadMin)) ? 'Lulus' : 'Tidak Lulus');
     const miss = kom.filter((k,j) => k.w>0 && vals[j]===null).length + (pre===null) + (post===null) + (needHad && had===null);
-    return {no:i+1, p, pre, post, had, prog, vals, pen, na, pi, predikat, status, miss};
+    return {no:i+1, p, pre, post, had, prog, vals, pen, na, pi, predikat, status, miss, prov: na!==null && miss>0};
   });
   rows.forEach(r => { r.rank = r.na===null ? null : 1 + rows.filter(o => o.na!==null && o.na > r.na).length; });
   const best = rows.filter(r => r.status==='Lulus').sort((a,b) => b.na-a.na || (b.post||0)-(a.post||0) || a.no-b.no).slice(0, Math.max(1, Math.min(10, d.nTop||3)));
@@ -601,14 +607,14 @@ function tabRekap(pid,d,c){
     <td class="c">${r.no}</td><td class="sticky" style="min-width:180px"><b>${h(r.p.nama)}</b></td><td style="min-width:180px">${h(r.p.instansi||'')}</td><td style="min-width:140px">${h(r.p.profesi||'')}</td>
     <td class="n">${fmt(r.pre)}</td><td class="n">${fmt(r.post)}</td><td class="n${r.prog<0?' neg':''}">${fmt(r.prog)}</td>
     ${r.vals.map(v => `<td class="n">${fmt(v)}</td>`).join('')}
-    <td class="n">${fmt(r.pen)}</td><td class="n">${fmt(r.had)}</td><td class="n"><b>${fmt(r.na)}</b></td>
-    <td>${h(r.predikat)}</td><td>${r.status?`<span class="tag ${r.status==='Lulus'?'ok':'no'}">${r.status}</span>`:''}</td>
+    <td class="n">${fmt(r.pen)}</td><td class="n">${fmt(r.had)}</td><td class="n"><b>${fmt(r.na)}</b>${r.prov?'<div class="prov">sementara</div>':''}</td>
+    <td>${h(r.predikat)}</td><td>${r.status?`<span class="tag ${r.status==='Lulus'?'ok':'no'}${r.prov?' provt':''}">${r.status}</span>`:''}</td>
     <td class="c">${r.rank??'–'}</td><td>${r.miss?`<span class="tag wait">Kurang ${r.miss} nilai</span>`:'<span class="tag ok">Lengkap</span>'}</td></tr>`).join('');
   const sr = (lbl,key) => `<tr><td></td><td class="sticky">${lbl}</td><td></td><td></td>
     ${['pre','post','prog'].map(x => `<td class="n">${fmt(c.cols[x][key])}</td>`).join('')}
     ${c.cols.kom.map(s => `<td class="n">${fmt(s[key])}</td>`).join('')}
     <td class="n">${fmt(c.cols.pen[key])}</td><td class="n">${fmt(c.cols.had[key])}</td><td class="n">${fmt(c.cols.na[key])}</td><td colspan="4"></td></tr>`;
-  return `<div class="row" style="margin-bottom:12px"><p class="small muted" style="flex:1;margin:0">Terhitung otomatis. Nama mata pelatihan lengkap ada di bawah tabel.</p><button class="btn sm" data-a="export">Unduh Excel</button></div>
+  return `<div class="row" style="margin-bottom:12px"><p class="small muted" style="flex:1;margin:0">Terhitung otomatis dari nilai yang sudah masuk. Nilai akhir bertanda <i>sementara</i> berarti masih ada nilai yang belum diisi. Nama mata pelatihan lengkap ada di bawah tabel.</p><button class="btn sm" data-a="export">Unduh Excel</button></div>
   <div class="scroll" data-scroll="rekap"><table>
     <thead><tr><th class="c">No</th><th class="sticky">Nama lengkap</th><th>Asal instansi</th><th>Profesi</th><th class="c">Pre Test</th><th class="c">Post Test</th><th class="c">Progress (%)</th>
     ${c.kom.map(k => `<th class="c" title="${h(k.nama)}">${h(k.kode||'MP')}<br><span style="font-weight:500">${h(k.jenis||'')}</span></th>`).join('')}
@@ -625,17 +631,18 @@ function tabRingkasan(pid,d,c){
   const brange = i => rentangTxt(c.pred, i);
   const statRow = (lbl,s,sub,strong) => `<tr><td>${strong?'<b>'+lbl+'</b>':lbl}${sub?`<div class="small muted">${sub}</div>`:''}</td><td class="n">${fmt(s.min)}</td><td class="n">${fmt(s.max)}</td><td class="n">${strong?'<b>'+fmt(s.avg)+'</b>':fmt(s.avg)}</td></tr>`;
   return `<div class="stack">
+  ${c.rows.some(r=>r.prov) ? `<div class="banner">Sebagian nilai belum lengkap (${c.rows.filter(r=>r.prov).length} peserta). Nilai akhir, predikat, status, dan peringkat yang ditandai <b>sementara</b> dapat berubah saat nilai lain masuk.</div>` : ''}
   <div class="kpis">
     <div class="kpi"><b>${c.rows.length}</b><span>peserta</span></div>
     <div class="kpi"><b style="color:var(--green)">${lulus}</b><span>lulus</span></div>
     <div class="kpi"><b style="color:var(--red)">${tl}</b><span>tidak lulus</span></div>
     <div class="kpi"><b>${fmt(c.cols.na.avg)}</b><span>rata-rata nilai akhir</span></div>
-    <div class="kpi"><b style="color:${kurang?'var(--amber)':'inherit'}">${kurang}</b><span>nilai belum lengkap</span></div>
+    <div class="kpi"><b style="color:${kurang?'var(--amber)':'inherit'}">${kurang}</b><span>peserta nilainya belum lengkap</span></div>
   </div>
   <div class="grid2">
     <section class="panel"><h2>Peserta terbaik</h2><p class="small muted">Dari peserta yang lulus. Bila nilai akhir sama, Post Test lebih tinggi didahulukan.</p>
-      ${c.best.length ? `<ol class="podium">${c.best.map((r,i) => `<li><span class="rk">${i+1}</span><div><b>${h(r.p.nama)}</b><div class="small muted">${h(r.p.instansi||'')} • Post ${fmt(r.post)} • Penugasan ${fmt(r.pen)}</div></div><span class="sc">${fmt(r.na)}</span></li>`).join('')}</ol>`
-        : '<p class="muted">Belum ada peserta dengan nilai akhir lengkap.</p>'}
+      ${c.best.length ? `<ol class="podium">${c.best.map((r,i) => `<li><span class="rk">${i+1}</span><div><b>${h(r.p.nama)}</b>${r.prov?' <span class="tag wait">sementara</span>':''}<div class="small muted">${[r.p.instansi ? h(r.p.instansi) : '', 'Post Test '+fmt(r.post), 'Penugasan '+fmt(r.pen)].filter(Boolean).join(' • ')}</div></div><span class="sc">${fmt(r.na)}</span></li>`).join('')}</ol>`
+        : '<p class="muted">Belum ada peserta sudah memiliki nilai akhir.</p>'}
     </section>
     <section class="panel"><h2>Distribusi predikat</h2><p class="small muted">${nNA} peserta dengan nilai akhir lengkap.</p>
       <div class="dist" role="img" aria-label="Distribusi predikat">${dist.filter(x=>x.n).map(x => `<i style="flex:${x.n};background:${x.col}" title="${h(x.p.label)}: ${x.n}">${x.n}</i>`).join('') || '<i style="flex:1;background:var(--line)"></i>'}</div>
