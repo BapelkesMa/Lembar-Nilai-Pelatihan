@@ -64,6 +64,7 @@ p{margin:0 0 10px}
 .small{font-size:13px}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--teal)}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
 :root[data-theme="dark"] .btn.primary{color:#062220}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary{color:#062220}}
@@ -184,7 +185,9 @@ details.paste textarea{min-height:140px;font-family:inherit;margin:10px 0}
 .pcard:hover{border-color:var(--teal)}
 .empty.compact{padding:28px 20px;display:flex;gap:18px;align-items:center;justify-content:space-between;text-align:left;flex-wrap:wrap;background:var(--surface)}
 footer.foot{border-top:1px solid var(--line);padding:18px 0 28px;font-size:12.5px;color:var(--muted)}
-.idgrid{display:grid;grid-template-columns:2fr 2fr 1.2fr 1fr;gap:0 16px;margin-top:6px}
+.rng{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+.idgrid{display:grid;grid-template-columns:2fr 2fr 1fr 1fr 1.2fr;gap:0 16px;margin-top:6px}
+@media (max-width:1100px){.idgrid{grid-template-columns:1fr 1fr 1fr}}
 @media (max-width:900px){.idgrid{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.idgrid{grid-template-columns:1fr}}
 .dochead{background:var(--surface);border-bottom:1px solid var(--line);padding:24px 0 20px}
@@ -192,6 +195,20 @@ footer.foot{border-top:1px solid var(--line);padding:18px 0 28px;font-size:12.5p
 .dochead .ledger{margin-top:16px}
 .dochead + main{padding-top:0}
 @media (max-width:860px){ .hero-in{grid-template-columns:1fr} .hero-art{display:none} .steps{grid-template-columns:1fr;margin-top:-24px} .hero{padding:32px 0 46px} }
+
+.cellw{position:relative;display:inline-block}
+.fh{position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;background:var(--teal);border:2px solid var(--surface);border-radius:3px;cursor:ns-resize;touch-action:none;z-index:2}
+.fh.demo{position:relative;display:inline-block;right:auto;bottom:auto;vertical-align:-1px;cursor:default}
+tr.fillsel input.in{background:var(--teal-soft);border-color:var(--teal)}
+.nilaigrid{display:grid;grid-template-columns:minmax(0,640px) minmax(240px,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.nilaigrid{grid-template-columns:1fr}.nilaigrid .guide{order:-1}}
+.guide{background:var(--teal-soft);border-radius:10px;padding:14px 16px;font-size:13.5px;position:sticky;top:76px}
+.guide ol{margin:8px 0 10px;padding-left:20px}
+.guide li{margin-bottom:6px}
+kbd{font:inherit;font-size:12px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px}
+.share{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px dashed var(--teal);border-radius:10px;padding:12px 14px;margin:6px 0 16px;background:color-mix(in srgb,var(--teal-soft) 45%,transparent)}
+.share b{display:block;font-size:14px}
+.share span{font-size:13px;color:var(--muted)}
 @media (max-width:640px){ .wrap{padding:0 14px} .panel{padding:16px} th,td{padding:6px 7px} }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
@@ -237,6 +254,23 @@ const stat = arr => { const a = arr.filter(isNum); if(!a.length) return {min:nul
 function toast(msg){ S.toast = msg; paintToast(); clearTimeout(toast.t); toast.t = setTimeout(()=>{ S.toast=null; paintToast(); }, 3200); }
 function paintToast(){ let el = document.getElementById('toast'); if(!S.toast){ el && el.remove(); return; } if(!el){ el = document.createElement('div'); el.id='toast'; el.className='toast'; el.setAttribute('role','status'); document.body.appendChild(el);} el.textContent = S.toast; }
 
+/* ---------- tanggal & rentang ---------- */
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BULAN_RX = {januari:1,februari:2,maret:3,april:4,mei:5,juni:6,juli:7,agustus:8,september:9,oktober:10,november:11,desember:12,agust:8,agt:8,ags:8,jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,sep:9,sept:9,okt:10,nov:11,des:12};
+function isoTgl(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function fmtTgl(iso){ const [y,m,d] = iso.split('-').map(Number); return `${d} ${BULAN[m-1]} ${y}`; }
+function parseTgl(txt){
+  const out = []; const rx = /(\d{1,2})\s*([A-Za-z]+)\.?\s*(\d{4})?/g; let m;
+  while ((m = rx.exec(String(txt||'')))) { const mo = BULAN_RX[m[2].toLowerCase()]; if (mo) out.push({d:+m[1], m:mo, y:m[3]?+m[3]:null}); }
+  for (let i = out.length-1; i >= 0; i--) if (!out[i].y && out[i+1]) out[i].y = out[i+1].y;
+  const ok = out.filter(x => x.y).map(x => isoTgl(x.y, x.m, x.d));
+  return [ok[0]||'', ok[1]||ok[0]||''];
+}
+function tglText(a,b){ if (!a && !b) return ''; if (!a || !b || a===b) return fmtTgl(a||b); return `${fmtTgl(a)} s/d ${fmtTgl(b)}`; }
+function predOf(d){ return (Array.isArray(d.predikat) && d.predikat.length===4) ? d.predikat : DEF_PRED; }
+function rentang(pred, i){ const lo = i===0 ? 0 : pred[i].batas + 0.01; const hi = i===3 ? 100 : pred[i+1].batas; return [lo, hi]; }
+function rentangTxt(pred, i){ const [lo,hi] = rentang(pred,i); return `${fmt(lo)} – ${fmt(hi)}`; }
+
 /* ---------- server ---------- */
 async function api(req){
   let r;
@@ -252,12 +286,13 @@ async function loadList(){
   catch(e){ S.listErr = e.message; if (!S.list) S.list = []; }
   render();
 }
-async function enter(id){
+async function enter(id, fasilK){
   S.busy = true; render();
   try {
     const j = await api({action:'get', id});
-    S.cur = id; S.doc = j.doc; S.view = 'doc'; S.drafts = {}; S.tab = 'pengaturan'; S.saving = 'idle';
-    try { history.replaceState(null, '', '#' + id); } catch(e){}
+    S.cur = id; S.doc = j.doc; S.drafts = {}; S.tab = 'pengaturan'; S.saving = 'idle';
+    if (fasilK) { S.view = 'fasil'; S.kSel = fasilK; } else S.view = 'doc';
+    try { history.replaceState(null, '', '#' + id + (fasilK ? '/nilai/' + fasilK : '')); } catch(e){}
     window.scrollTo(0,0);
   } catch(e){ toast(e.message); }
   S.busy = false; render();
@@ -287,7 +322,7 @@ async function flush(){
   if (S.pending && S.saving !== 'error') flush();
 }
 async function poll(){
-  if (!S.cur || !S.doc || S.pending || S.inflight || document.visibilityState !== 'visible') return;
+  if (!S.cur || !S.doc || S.pending || S.inflight || drag || document.visibilityState !== 'visible') return;
   const seq = S.seq;
   try {
     const j = await api({action:'get', id:S.cur});
@@ -335,7 +370,7 @@ function hitung(d){
 
 /* ---------- views ---------- */
 function statusPill(){
-  if (S.view !== 'doc') return '';
+  if (S.view !== 'doc' && S.view !== 'fasil') return '';
   if (S.saving === 'saving' || S.inflight) return '<span class="pill" id="st">Menyimpan…</span>';
   if (S.saving === 'error') return '<button class="pill warn" id="st" data-a="retry" style="border:0;cursor:pointer">Belum tersimpan, coba lagi</button>';
   if (S.saving === 'saved' && S.savedAt) return `<span class="pill ok" id="st">✓ Tersimpan ${S.savedAt.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</span>`;
@@ -450,7 +485,9 @@ function tabPengaturan(pid,d,c){
   <section class="panel"><h2>Identitas pelatihan</h2><p class="small muted">Tampil di judul rekap dan file Excel.</p>
       <div class="idgrid"><label class="f">Judul pelatihan ${inp('judul', d.judul, {label:'Judul'})}</label>
       <label class="f">Penyelenggara / kerjasama ${inp('penyelenggara', d.penyelenggara, {ph:'Kerjasama Bapelkes Mataram dengan …', label:'Penyelenggara'})}</label>
-      <label class="f">Tanggal ${inp('tanggal', d.tanggal, {ph:'27 Juli s/d 1 Agustus 2026', label:'Tanggal'})}</label>
+      ${(() => { const [a,b] = parseTgl(d.tanggal); const dis = isP()?'':' disabled';
+        return `<label class="f">Tanggal mulai<input type="date" class="in" data-date="0" value="${a}"${dis}></label>
+      <label class="f">Tanggal selesai<input type="date" class="in" data-date="1" value="${b}" min="${a}"${dis}></label>`; })()}
       <label class="f">Tempat ${inp('tempat', d.tempat, {ph:'Bapelkes Mataram', label:'Tempat'})}</label></div>
   </section>
   <div class="grid2">
@@ -467,13 +504,15 @@ function tabPengaturan(pid,d,c){
         <label class="f">Kehadiran minimal (%) ${inp('hadirMin', d.hadirMin, {num:true, max:100, ph:'–', label:'Kehadiran minimal'})}</label>
         <label class="f">Peserta terbaik ditampilkan ${inp('nTop', d.nTop, {num:true, max:10, label:'Jumlah peserta terbaik'})}</label>
       </div>
-      <p class="small muted">Kosongkan kehadiran minimal bila kehadiran bukan syarat lulus.</p>
+      <p class="small muted">Nilai akhir ${fmt(c.lulus)} belum lulus; nilai terendah yang lulus ${fmt(c.lulus+0.01)}. Kosongkan kehadiran minimal bila kehadiran bukan syarat lulus.</p>
     </section>
-    <section class="panel"><h2>Predikat</h2><p class="small muted">Predikat ditentukan dari nilai akhir di atas batas. Batas harus naik.</p>
-    <div class="scroll" ><table><thead><tr><th>Nilai akhir di atas</th><th>Predikat</th></tr></thead><tbody>
-    ${pred.map((x,i) => `<tr><td>${i===0?'<span class="muted small">di bawah batas berikutnya</span>':`<input class="in num" data-pred="${i}" data-f="batas" value="${h(fmtIn(x.batas))}" inputmode="decimal" aria-label="Batas predikat ${i}"${isP()?'':' disabled'}>`}</td>
-      <td><input class="in" data-pred="${i}" data-f="label" value="${h(x.label)}" aria-label="Nama predikat ${i}"${isP()?'':' disabled'}></td></tr>`).join('')}
+    <section class="panel"><h2>Predikat</h2><p class="small muted">Ubah angka batas atas bila diperlukan; batas bawah menyesuaikan otomatis.</p>
+    <div class="scroll"><table><thead><tr><th>Predikat</th><th>Rentang nilai akhir</th></tr></thead><tbody>
+    ${[3,2,1,0].map(i => { const [lo] = rentang(pred,i); const dis = isP()?'':' disabled';
+      return `<tr><td><input class="in" data-pred="${i}" data-f="label" value="${h(pred[i].label)}" aria-label="Nama predikat"${dis}></td>
+      <td><div class="rng"><span>${fmt(lo)}</span><span class="muted">s/d</span>${i===3 ? '<span>100,00</span>' : `<input class="in num" data-pred="${i+1}" data-f="batas" value="${h(fmtIn(pred[i+1].batas))}" inputmode="decimal" aria-label="Batas atas ${h(pred[i].label)}"${dis}>`}</div></td></tr>`; }).join('')}
     </tbody></table></div>
+    <p class="small muted" style="margin-top:10px">Nilai tepat di batas atas termasuk predikat tersebut. Contoh: ${fmt(pred[2].batas)} = ${h(pred[1].label)}, sedangkan ${fmt(pred[2].batas+0.01)} = ${h(pred[2].label)}.</p>
       </section>
   </div>
   <section class="panel"><div class="row"><div style="flex:1;min-width:240px"><h2>Mata pelatihan & komponen penilaian</h2>
@@ -510,26 +549,47 @@ function tabPeserta(pid,d,c){
   </section>`;
 }
 
+function nilaiPanel(c, k, fasil){
+  const j = c.kom.findIndex(x => x.id===k.id);
+  const f = c.rows.filter(r => r.vals[j]!==null).length;
+  const rows = c.rows.map((r,ri) => `<tr><td class="c muted">${r.no}</td><td>${h(r.p.nama)}<div class="small muted">${h(r.p.instansi||'')}</div></td>
+    <td class="c"><span class="cellw">${inp(`nilai/${k.id}/${r.p.id}`, r.vals[j], {num:true, max:100, label:'Nilai '+r.p.nama})}<span class="fh" data-fh="${ri}" data-k="${h(k.id)}" title="Tarik ke bawah untuk menyalin nilai ini"></span></span></td></tr>`).join('');
+  const link = location.origin + location.pathname + '#' + S.cur + '/nilai/' + k.id;
+  const msg = `Yth. Bapak/Ibu Fasilitator,\nMohon berkenan mengisi nilai ${k.kode} ${k.nama}${k.jenis?' ('+k.jenis+')':''} pada ${S.doc.judul} melalui tautan berikut:\n${link}\nTerima kasih.`;
+  const guide = `<div class="guide"><b>Cara mengisi</b>
+    <ol><li>Ketik nilai (0–100), lalu tekan <kbd>Enter</kbd> untuk pindah ke peserta berikutnya.</li>
+    <li>Nilai sudah ada di Excel? Salin satu kolom nilai, klik kotak peserta pertama, lalu tempel (<kbd>Ctrl</kbd>+<kbd>V</kbd>). Nilai otomatis terisi ke bawah.</li>
+    <li>Nilai sama untuk beberapa peserta? Isi kotak pertama, lalu tarik kotak kecil <span class="fh demo"></span> di pojoknya ke bawah.</li></ol>
+    <span class="small muted">Semua nilai tersimpan otomatis. Tanda "✓ Tersimpan" muncul di kanan atas.</span></div>`;
+  const share = fasil ? '' : `<div class="share"><div><b>Tautan khusus fasilitator</b><span>Fasilitator cukup membuka tautan ini untuk mengisi nilai ${h(k.kode)} ${h(k.jenis||'')}, tanpa menu lain.</span></div>
+    <div class="row"><button class="btn sm" data-a="copyLink" data-id="${h(link)}">Salin tautan</button><a class="btn sm primary" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Kirim lewat WhatsApp</a></div></div>`;
+  return `<section class="panel">
+    ${fasil ? '' : `<h2><span class="kode">${h(k.kode)}</span> ${h(k.nama)}</h2>`}
+    <p class="muted small">${h(k.jenis||'Penilaian')}${k.fasilitator?' • Fasilitator: '+h(k.fasilitator):''} • <b>${f} dari ${c.rows.length}</b> peserta sudah dinilai</p>
+    ${share}
+    <div class="nilaigrid"><div class="scroll"><table><thead><tr><th class="c">No</th><th>Peserta</th><th class="c">Nilai</th></tr></thead><tbody id="nilaiBody">${rows}</tbody></table></div>${guide}</div>
+  </section>`;
+}
 function tabNilai(pid,d,c){
   if (!c.kom.length) return `<div class="empty">Belum ada mata pelatihan. Tambahkan di tab Pengaturan.</div>`;
   if (!c.rows.length) return `<div class="empty">Belum ada peserta. Panitia perlu mengisi tab Data Peserta lebih dulu.</div>`;
   if (!c.kom.find(k => k.id===S.kSel)) S.kSel = c.kom[0].id;
-  const j = c.kom.findIndex(k => k.id===S.kSel), k = c.kom[j];
-  const f = c.rows.filter(r => r.vals[j]!==null).length;
+  const k = c.kom.find(x => x.id===S.kSel);
   const chips = c.kom.map((x,i) => { const n = c.rows.filter(r => r.vals[i]!==null).length;
     return `<button class="chip" aria-pressed="${x.id===S.kSel}" data-a="kSel" data-id="${x.id}">${h(x.kode||'MP')} ${h(x.jenis||'')} <small>${n}/${c.rows.length}</small></button>`; }).join('');
-  const rows = c.rows.map(r => `<tr><td class="c muted">${r.no}</td><td>${h(r.p.nama)}<div class="small muted">${h(r.p.instansi||'')}</div></td>
-    <td class="c">${inp(`nilai/${k.id}/${r.p.id}`, r.vals[j], {num:true, max:100, label:'Nilai '+r.p.nama})}</td></tr>`).join('');
-  return `<p class="small muted">Pilih komponen yang Anda nilai.</p><div class="chips">${chips}</div>
-  <section class="panel">
-    <h2><span class="kode">${h(k.kode)}</span> ${h(k.nama)}</h2>
-    <p class="muted small">${h(k.jenis||'Penilaian')}${k.fasilitator?' • Fasilitator: '+h(k.fasilitator):''} • ${f} dari ${c.rows.length} terisi</p>
-    <div class="scroll" style="max-width:640px"><table><thead><tr><th class="c">No</th><th>Peserta</th><th class="c">Nilai</th></tr></thead><tbody>${rows}</tbody></table></div>
-    ${canNil()?`<details class="paste"><summary>Tempel satu kolom nilai dari Excel</summary>
-      <p class="small muted">Satu nilai per baris, urutan sama dengan daftar peserta di atas (No 1 sampai ${c.rows.length}). Baris kosong dilewati.</p>
-      <textarea class="in" id="pasteNil" style="max-width:240px" placeholder="85&#10;86&#10;85"></textarea><br>
-      <button class="btn primary sm" data-a="nPaste">Isi nilai ${h(k.kode)} ${h(k.jenis||'')}</button></details>`:''}
-  </section>`;
+  return `<p class="small muted">Pilih komponen penilaian.</p><div class="chips">${chips}</div>${nilaiPanel(c, k, false)}`;
+}
+function viewFasil(){
+  const d = S.doc, c = hitung(d); const k = c.kom.find(x => x.id===S.kSel);
+  if (!k) return `<main><div class="wrap"><div class="empty"><h2 style="color:var(--ink)">Mata pelatihan tidak ditemukan</h2><p>Tautan ini mungkin sudah tidak berlaku. Mohon hubungi panitia pelatihan.</p></div></div></main>`;
+  const sib = c.kom.filter(x => x.kode===k.kode && x.nama===k.nama);
+  const chips = sib.length > 1 ? `<p class="small muted">Mata pelatihan ini memiliki ${sib.length} jenis penilaian:</p><div class="chips">${sib.map(x => { const i = c.kom.indexOf(x); const n = c.rows.filter(r => r.vals[i]!==null).length;
+    return `<button class="chip" aria-pressed="${x.id===k.id}" data-a="kSelF" data-id="${x.id}">${h(x.jenis||'Penilaian')} <small>${n}/${c.rows.length}</small></button>`; }).join('')}</div>` : '';
+  return `<section class="dochead"><div class="wrap">
+    <p class="small muted" style="margin:0 0 4px">${h(d.judul)}${d.tanggal?' • '+h(d.tanggal):''}</p>
+    <h1><span class="kode">${h(k.kode)}</span> ${h(k.nama)}</h1>
+    <div class="muted">Pengisian nilai oleh Fasilitator</div></div></section>
+  <main><div class="wrap" style="padding-top:22px">${chips}${c.rows.length ? nilaiPanel(c, k, true) : '<div class="empty">Daftar peserta belum diisi oleh panitia.</div>'}</div></main>`;
 }
 
 function tabRekap(pid,d,c){
@@ -559,7 +619,7 @@ function tabRingkasan(pid,d,c){
   const lulus = c.rows.filter(r=>r.status==='Lulus').length, tl = c.rows.filter(r=>r.status==='Tidak Lulus').length, kurang = c.rows.filter(r=>r.miss).length;
   const nNA = c.cols.na.n;
   const dist = c.pred.map((p,i) => ({p, n:c.dist[i], col:PRED_COL[i]}));
-  const brange = i => i===0 ? `≤ ${fmt(c.pred[1].batas)}` : i===3 ? `> ${fmt(c.pred[3].batas)}` : `${fmt(c.pred[i].batas)} – ${fmt(c.pred[i+1].batas)}`;
+  const brange = i => rentangTxt(c.pred, i);
   const statRow = (lbl,s,sub,strong) => `<tr><td>${strong?'<b>'+lbl+'</b>':lbl}${sub?`<div class="small muted">${sub}</div>`:''}</td><td class="n">${fmt(s.min)}</td><td class="n">${fmt(s.max)}</td><td class="n">${strong?'<b>'+fmt(s.avg)+'</b>':fmt(s.avg)}</td></tr>`;
   return `<div class="stack">
   <div class="kpis">
@@ -600,7 +660,7 @@ function render(){
   const formVals = {}; app.querySelectorAll('form[data-form] [name]').forEach(el => formVals[el.closest('form').dataset.form+':'+el.name] = el.value);
   const aid = a && a.id === 'q' ? 'q' : null;
   const focusName = a && a.name && a.closest && a.closest('form[data-form]') ? a.closest('form').dataset.form+':'+a.name : null;
-  const body = (S.view==='doc' && S.doc) ? viewPelatihan() : S.view==='new' ? viewNew() : viewHome();
+  const body = (S.view==='fasil' && S.doc) ? viewFasil() : (S.view==='doc' && S.doc) ? viewPelatihan() : S.view==='new' ? viewNew() : viewHome();
   app.innerHTML = header() + body;
   app.querySelectorAll('[data-scroll]').forEach(el => { if (scrolls[el.dataset.scroll]) el.scrollLeft = scrolls[el.dataset.scroll]; });
   app.querySelectorAll('textarea[id]').forEach(t => { if (paste[t.id]) t.value = paste[t.id]; });
@@ -629,10 +689,20 @@ app.addEventListener('keydown', e => {
 });
 app.addEventListener('change', async e => {
   const t = e.target; const pid = S.cur; if (!pid || !S.doc) return;
+  if (t.dataset.date !== undefined) {
+    const cur = parseTgl(S.doc.tanggal); cur[+t.dataset.date] = t.value;
+    if (+t.dataset.date === 0 && (!cur[1] || cur[1] < cur[0])) cur[1] = cur[0];
+    if (cur[0] && cur[1] && cur[1] < cur[0]) { toast('Tanggal selesai tidak boleh sebelum tanggal mulai'); render(); return; }
+    upd({tanggal: tglText(cur[0], cur[1])}); return;
+  }
   if (t.dataset.pred !== undefined) {
     const d = S.doc; const pred = JSON.parse(JSON.stringify(Array.isArray(d.predikat)&&d.predikat.length===4 ? d.predikat : DEF_PRED));
     const i = +t.dataset.pred;
-    if (t.dataset.f === 'batas') { const n = parseNum(t.value); if (n===null || isNaN(n)) { t.classList.add('bad'); toast('Batas predikat harus angka'); return; } pred[i].batas = n; }
+    if (t.dataset.f === 'batas') {
+      const n = parseNum(t.value); if (n===null || isNaN(n)) { t.classList.add('bad'); toast('Batas predikat harus angka'); return; }
+      const test = pred.map(x => x.batas); test[i] = n;
+      if (!(test[1] > 0 && test[1] < test[2] && test[2] < test[3] && test[3] < 100)) { t.classList.add('bad'); toast('Batas harus berurutan naik dan di bawah 100'); return; }
+      pred[i].batas = n; }
     else pred[i].label = t.value.trim() || DEF_PRED[i].label;
     t.classList.remove('bad'); upd({predikat: pred}); return;
   }
@@ -663,6 +733,11 @@ app.addEventListener('click', async e => {
     case 'tab': S.tab = id; render(); break;
     case 'goK': S.kSel = id; S.tab = 'nilai'; render(); break;
     case 'kSel': S.kSel = id; render(); break;
+    case 'kSelF': S.kSel = id; try { history.replaceState(null, '', '#' + S.cur + '/nilai/' + id); } catch(e){} render(); break;
+    case 'copyLink':
+      try { await navigator.clipboard.writeText(id); toast('Tautan disalin. Tempel di WhatsApp atau email fasilitator.'); }
+      catch(err){ window.prompt('Salin tautan berikut:', id); }
+      break;
     case 'delP':
       if (!confirm(`Hapus “${d.judul}” beserta semua peserta dan nilainya? Tindakan ini tidak bisa dibatalkan.`)) break;
       try { await api({action:'delete', id:pid}); toast('Pelatihan dihapus'); S.pending = null; leave(); } catch(err){ toast(err.message); }
@@ -723,6 +798,54 @@ app.addEventListener('submit', async ev => {
     return;
   }
 });
+/* ---------- tempel kolom & tarik ke bawah ---------- */
+app.addEventListener('paste', e => {
+  const t = e.target; if (!t.matches || !t.matches('input.in[data-k^="nilai/"], input.in[data-k^="peserta/"][data-t="num"]')) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+  const lines = text.replace(/\r/g,'').split('\n'); while (lines.length && !lines[lines.length-1].trim()) lines.pop();
+  if (lines.length <= 1) return;
+  e.preventDefault();
+  const td = t.closest('td'), tr = t.closest('tr'), body = tr.parentElement; const rows = [...body.rows];
+  const start = rows.indexOf(tr); let patch = {}, n = 0, bad = 0, over = 0;
+  lines.forEach((l, j) => {
+    const row = rows[start + j]; if (!row) { over++; return; }
+    const el = row.cells[td.cellIndex] && row.cells[td.cellIndex].querySelector('input[data-k]'); if (!el) return;
+    const v = parseNum(l.split('\t')[0]); if (v === null) return;
+    if (Number.isNaN(v) || v < 0 || v > 100) { bad++; return; }
+    patch = deepMerge(patch, nest(el.dataset.k, v)); delete S.drafts[el.dataset.k]; n++;
+  });
+  if (n) upd(patch);
+  toast(`${n} nilai ditempel${bad?`, ${bad} bukan angka 0–100 dilewati`:''}${over?`, ${over} baris melebihi jumlah peserta`:''}`);
+});
+let drag = null;
+function dragMark(){ const body = document.getElementById('nilaiBody'); if (!body || !drag) return;
+  [...body.rows].forEach((r,i) => r.classList.toggle('fillsel', i >= drag.start && i <= drag.end)); }
+app.addEventListener('pointerdown', e => {
+  const fh = e.target.closest('.fh[data-fh]'); if (!fh) return;
+  e.preventDefault();
+  const tr = fh.closest('tr'); const el = tr.querySelector('input[data-k]');
+  const v = parseNum(el.value);
+  if (v === null || Number.isNaN(v) || v < 0 || v > 100) { toast('Isi nilai di kotak ini dulu, lalu tarik ke bawah'); return; }
+  drag = {start: +fh.dataset.fh, end: +fh.dataset.fh, v, kid: fh.dataset.k};
+  try { fh.setPointerCapture(e.pointerId); } catch(err){}
+  dragMark();
+});
+app.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY); const tr = el && el.closest && el.closest('#nilaiBody tr');
+  if (tr) { const i = [...tr.parentElement.rows].indexOf(tr); drag.end = Math.max(drag.start, i); dragMark(); }
+  if (e.clientY > window.innerHeight - 40) window.scrollBy(0, 12); else if (e.clientY < 80) window.scrollBy(0, -12);
+});
+function endDrag(){
+  if (!drag) return; const d = drag; drag = null;
+  const c = hitung(S.doc); const patch = {nilai:{[d.kid]:{}}};
+  for (let i = d.start; i <= d.end && i < c.rows.length; i++) { patch.nilai[d.kid][c.rows[i].p.id] = d.v; delete S.drafts[`nilai/${d.kid}/${c.rows[i].p.id}`]; }
+  upd(patch);
+  if (d.end > d.start) toast(`Nilai ${fmt(d.v)} disalin ke ${d.end - d.start} peserta di bawahnya`);
+}
+app.addEventListener('pointerup', endDrag);
+app.addEventListener('pointercancel', () => { drag = null; dragMark(); render(); });
+
 /* ---------- export ---------- */
 async function exportXlsx(){
   const d = S.doc; if (!d) return;
@@ -739,8 +862,8 @@ async function exportXlsx(){
   const nNA = c.cols.na.n;
   const sum = [['RINGKASAN HASIL PENILAIAN'],[d.judul||''],[],
     ['Jumlah peserta', c.rows.length],['Lulus', c.rows.filter(r=>r.status==='Lulus').length],['Tidak Lulus', c.rows.filter(r=>r.status==='Tidak Lulus').length],['Nilai belum lengkap', c.rows.filter(r=>r.miss).length],[],
-    ['Bobot nilai akhir', `Post Test ${c.B.post||0}%, Penugasan ${c.B.pen||0}%, Kehadiran ${c.B.had||0}%`],['Lulus jika nilai akhir di atas', c.lulus],[],
-    ['Distribusi predikat','Jumlah','%'], ...c.pred.map((p,i) => [p.label, c.dist[i], nNA ? Math.round(c.dist[i]/nNA*1000)/10 : '']).reverse(),[],
+    ['Tanggal', d.tanggal||''],['Bobot nilai akhir', `Post Test ${c.B.post||0}%, Penugasan ${c.B.pen||0}%, Kehadiran ${c.B.had||0}%`],['Lulus jika nilai akhir di atas', c.lulus],[],
+    ['Distribusi predikat','Rentang nilai akhir','Jumlah','%'], ...c.pred.map((p,i) => [p.label, rentangTxt(c.pred,i), c.dist[i], nNA ? Math.round(c.dist[i]/nNA*1000)/10 : '']).reverse(),[],
     ['Peserta terbaik','Nama','Asal Instansi','Post Test','Rata-rata Penugasan','Nilai Akhir'], ...c.best.map((r,i) => [i+1, r.p.nama, r.p.instansi||'', r2(r.post), r2(r.pen), r2(r.na)]),[],
     ['Komponen','Jenis','Nama Mata Pelatihan','Terendah','Tertinggi','Rata-rata'],
     ['Pre Test','','',r2(c.cols.pre.min),r2(c.cols.pre.max),r2(c.cols.pre.avg)],['Post Test','','',r2(c.cols.post.min),r2(c.cols.post.max),r2(c.cols.post.avg)],
@@ -755,7 +878,7 @@ async function exportXlsx(){
 
 /* ---------- boot ---------- */
 render(); loadList();
-if (location.hash.length > 1) enter(decodeURIComponent(location.hash.slice(1)));
+if (location.hash.length > 1) { const p = decodeURIComponent(location.hash.slice(1)).split('/'); if (p[1]==='nilai' && p[2]) enter(p[0], p[2]); else enter(p[0]); }
 })();
 </script>
 </body>
