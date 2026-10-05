@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lembar Nilai Pelatihan – Bapelkes Mataram</title>
+<title>Lembar Penilaian Pelatihan – Bapelkes Mataram</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,10 +152,10 @@ details.paste textarea{min-height:140px;font-family:inherit;margin:10px 0}
 :root{--band:#0B4F4C;--band-2:#0F6460;--on-band:#FFFFFF}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--band:#0C2B29;--band-2:#123B38}}
 :root[data-theme="dark"]{--band:#0C2B29;--band-2:#123B38}
-.hero{background:linear-gradient(180deg,var(--band) 0%,var(--band-2) 100%);color:var(--on-band);padding:44px 0 56px}
-.hero-in{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;align-items:center}
-.hero h1{color:#fff;font-size:clamp(28px,4vw,44px);max-width:18ch;margin-bottom:14px}
-.hero p{color:rgba(255,255,255,.82);max-width:52ch;font-size:16px;margin-bottom:22px}
+.hero{background:linear-gradient(180deg,var(--band) 0%,var(--band-2) 100%);color:var(--on-band);padding:36px 0 58px}
+.hero-in{display:block}
+.hero h1{color:#fff;font-size:clamp(26px,3.4vw,40px);max-width:24ch;margin-bottom:12px}
+.hero p{color:rgba(255,255,255,.82);max-width:68ch;font-size:16px;margin-bottom:22px}
 .btn.light{background:#fff;color:var(--band);border-color:#fff}
 .btn.light:hover{background:#E8F5F3}
 .btn.lg{padding:11px 20px;font-size:15px}
@@ -344,20 +344,11 @@ function statusPill(){
 function paintStatus(){ const el = document.getElementById('st'); if (el) el.outerHTML = statusPill(); }
 function header(){
   return `<header class="top"><div class="wrap">
-    <button class="brand" data-a="home" aria-label="Kembali ke daftar pelatihan"><span class="mark" aria-hidden="true">${'<i></i>'.repeat(9)}</span><span>Lembar Nilai Pelatihan<small>Bapelkes Mataram</small></span></button>
+    <button class="brand" data-a="home" aria-label="Kembali ke daftar pelatihan"><span class="mark" aria-hidden="true">${'<i></i>'.repeat(9)}</span><span>Lembar Penilaian Pelatihan<small>Bapelkes Mataram</small></span></button>
     <span class="spacer"></span>
     ${statusPill()}
     ${S.view==='doc' ? `<button class="btn sm" data-a="export">Unduh Excel</button><button class="btn ghost sm" data-a="logout">Daftar pelatihan</button>` : ''}
   </div></header>`;
-}
-function heroArt(){
-  const rows = [[92,88,90,86,94,'top'],[85,90,84,88,86,''],[88,82,86,90,84,''],[80,86,82,84,88,''],[84,80,88,82,86,'']];
-  const col = v => `rgba(127,211,201,${(0.35 + (v-78)/16*0.65).toFixed(2)})`;
-  return `<div class="hero-art" aria-hidden="true"><div class="sheet">
-    <div class="sh-h"><span>Rekap nilai</span><span>Nilai akhir</span></div>
-    <div class="sh-r"><b></b><b style="text-align:left">Peserta</b><b>MP1</b><b>MP2</b><b>MP3</b><b>MP4</b><b>MP5</b><b></b></div>
-    ${rows.map((r,i) => `<div class="sh-r"><b>${i+1}</b><span class="nm" style="width:${88-i*9}%"></span>${r.slice(0,5).map(v => `<span class="cl" style="background:${col(v)}"></span>`).join('')}<span class="tg${r[5]?' top':''}">${r[5]?'Terbaik':'Lulus'}</span></div>`).join('')}
-  </div></div>`;
 }
 function viewHome(){
   if (!API_URL) return `<main><div class="wrap"><div class="empty"><h2 style="color:var(--ink)">Server belum dihubungkan</h2><p>Isi <b>API_URL</b> di bagian atas file <code>index.html</code> dengan URL Web App Google Apps Script, lalu unggah ulang ke GitHub. Langkahnya ada di README.</p></div></div></main>`;
@@ -372,15 +363,14 @@ function viewHome(){
       <div><div class="meter${pct>=100?' full':''}"><i style="width:${pct}%"></i></div><div class="small muted" style="margin-top:4px">${pct}% nilai fasilitator terisi</div></div>
       <div class="row"><button class="btn primary sm" data-a="open" data-id="${h(p.id)}">Buka pelatihan</button></div>
     </article>`; }).join('');
-  const steps = [['Panitia menyiapkan','Buat pelatihan, atur bobot nilai, daftar mata pelatihan, dan data peserta.'],
-                 ['Fasilitator mengisi nilai','Pilih mata pelatihan yang diampu, isi nilai per peserta. Tersimpan otomatis.'],
-                 ['Rekap jadi sendiri','Nilai akhir, predikat, peringkat, dan peserta terbaik siap diunduh ke Excel.']];
+  const steps = [['Persiapan oleh Panitia','Panitia membuat data pelatihan, menetapkan bobot nilai, mata pelatihan, dan daftar peserta.'],
+                 ['Pengisian nilai oleh Fasilitator','Fasilitator mengisi nilai peserta pada mata pelatihan yang diampu. Data tersimpan secara otomatis.'],
+                 ['Rekapitulasi nilai','Nilai akhir, predikat, peringkat, dan peserta terbaik tersusun otomatis dan dapat diunduh dalam format Excel.']];
   return `<section class="hero"><div class="wrap hero-in">
-      <div><h1>Penilaian peserta pelatihan, tanpa menyusun ulang form</h1>
-      <p>Satu tempat untuk semua pelatihan Bapelkes Mataram. Jumlah peserta dan mata pelatihan bebas, perhitungan selalu konsisten.</p>
+      <div><h1>Lembar Penilaian Pelatihan Bapelkes Mataram</h1>
+      <p>Sarana pengisian dan rekapitulasi nilai peserta pelatihan oleh Panitia dan Fasilitator. Jumlah peserta dan mata pelatihan dapat disesuaikan dengan setiap pelatihan.</p>
       <button class="btn light lg" data-a="new">Buat pelatihan baru</button>
-      <div class="hint">Atau buka pelatihan yang sudah ada di bawah.</div></div>
-      ${heroArt()}
+      <div class="hint">Pelatihan yang telah dibuat dapat dibuka melalui daftar di bawah.</div></div>
     </div></section>
   <main><div class="wrap">
     <div class="steps">${steps.map((x,i) => `<div class="step"><span class="n">${i+1}</span><div><b>${x[0]}</b><span>${x[1]}</span></div></div>`).join('')}</div>
@@ -391,7 +381,7 @@ function viewHome(){
       : !L.length ? `<div class="empty compact"><div><h3 style="margin:0 0 4px;color:var(--ink)">Belum ada pelatihan</h3><span>Pelatihan yang dibuat akan tampil di sini, lengkap dengan progres pengisian nilainya.</span></div><button class="btn primary" data-a="new">Buat pelatihan pertama</button></div>`
       : shown.length ? `<div class="cards">${cards}</div>` : '<p class="muted">Tidak ada pelatihan yang cocok dengan pencarian.</p>'}
   </div></main>
-  <footer class="foot"><div class="wrap">Lembar Nilai Pelatihan, Bapelkes Mataram. Data tersimpan di Google Sheet milik Bapelkes.</div></footer>`;
+  <footer class="foot"><div class="wrap">Lembar Penilaian Pelatihan – Bapelkes Mataram. Data tersimpan pada Google Sheet milik Bapelkes Mataram.</div></footer>`;
 }
 function viewNew(){
   const L = S.list || [];
