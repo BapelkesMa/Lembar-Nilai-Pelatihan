@@ -275,7 +275,7 @@ function parseTgl(txt){
 }
 function tglText(a,b){ if (!a && !b) return ''; if (!a || !b || a===b) return fmtTgl(a||b); return `${fmtTgl(a)} s/d ${fmtTgl(b)}`; }
 function predOf(d){ return (Array.isArray(d.predikat) && d.predikat.length===4) ? d.predikat : DEF_PRED; }
-function rentang(pred, i){ const lo = i===0 ? 0 : pred[i].batas + 0.01; const hi = i===3 ? 100 : pred[i+1].batas; return [lo, hi]; }
+function rentang(pred, i){ const lo = i===0 ? 0 : pred[i].batas; const hi = i===3 ? 100 : Math.round((pred[i+1].batas - 0.01)*100)/100; return [lo, hi]; }
 function rentangTxt(pred, i){ const [lo,hi] = rentang(pred,i); return `${fmt(lo)} – ${fmt(hi)}`; }
 
 /* ---------- server ---------- */
@@ -365,8 +365,8 @@ function hitung(d){
     if (bk>0 && had!==null) { sv += had*bk; sb += bk; }
     const na = sb>0 ? Math.round(sv/sb*100)/100 : null;
     let pi = null, predikat = '';
-    if (na!==null){ pi = [1,2,3].filter(j => isNum(pred[j].batas) && pred[j].batas < na).length; predikat = pred[pi].label; }
-    const status = na===null ? '' : ((na > lulus && (hadMin===null || had===null || had >= hadMin)) ? 'Lulus' : 'Tidak Lulus');
+    if (na!==null){ pi = [1,2,3].filter(j => isNum(pred[j].batas) && pred[j].batas <= na).length; predikat = pred[pi].label; }
+    const status = na===null ? '' : ((na >= lulus && (hadMin===null || had===null || had >= hadMin)) ? 'Lulus' : 'Tidak Lulus');
     const miss = kom.filter((k,j) => k.w>0 && vals[j]===null).length + (pre===null) + (post===null) + (needHad && had===null);
     return {no:i+1, p, pre, post, had, prog, vals, pen, na, pi, predikat, status, miss, prov: na!==null && miss>0};
   });
@@ -511,19 +511,19 @@ function tabPengaturan(pid,d,c){
       </div>
       ${Math.abs(c.totalB-100)>0.001 ? `<p class="tag no">Total bobot ${fmt(c.totalB,0)}%, harus 100%</p>` : '<p class="tag ok">Total bobot 100%</p>'}
       <div class="row">
-        <label class="f">Lulus jika nilai akhir di atas ${inp('lulus', d.lulus, {num:true, max:100, label:'Batas lulus'})}</label>
+        <label class="f">Nilai minimal lulus ${inp('lulus', d.lulus, {num:true, max:100, label:'Batas lulus'})}</label>
         <label class="f">Kehadiran minimal (%) ${inp('hadirMin', d.hadirMin, {num:true, max:100, ph:'–', label:'Kehadiran minimal'})}</label>
         <label class="f">Peserta terbaik ditampilkan ${inp('nTop', d.nTop, {num:true, max:10, label:'Jumlah peserta terbaik'})}</label>
       </div>
-      <p class="small muted">Nilai akhir ${fmt(c.lulus)} belum lulus; nilai terendah yang lulus ${fmt(c.lulus+0.01)}. Kosongkan kehadiran minimal bila kehadiran bukan syarat lulus.</p>
+      <p class="small muted">Peserta lulus jika nilai akhir ${fmt(c.lulus)} atau lebih. Kosongkan kehadiran minimal bila kehadiran bukan syarat lulus.</p>
     </section>
-    <section class="panel"><h2>Predikat</h2><p class="small muted">Ubah angka batas atas bila diperlukan; batas bawah menyesuaikan otomatis.</p>
+    <section class="panel"><h2>Predikat</h2><p class="small muted">Ubah angka batas bawah bila diperlukan; batas atas menyesuaikan otomatis.</p>
     <div class="scroll"><table><thead><tr><th>Predikat</th><th>Rentang nilai akhir</th></tr></thead><tbody>
-    ${[3,2,1,0].map(i => { const [lo] = rentang(pred,i); const dis = isP()?'':' disabled';
+    ${[3,2,1,0].map(i => { const [lo, hi] = rentang(pred,i); const dis = isP()?'':' disabled';
       return `<tr><td><input class="in" data-pred="${i}" data-f="label" value="${h(pred[i].label)}" aria-label="Nama predikat"${dis}></td>
-      <td><div class="rng"><span>${fmt(lo)}</span><span class="muted">s/d</span>${i===3 ? '<span>100,00</span>' : `<input class="in num" data-pred="${i+1}" data-f="batas" value="${h(fmtIn(pred[i+1].batas))}" inputmode="decimal" aria-label="Batas atas ${h(pred[i].label)}"${dis}>`}</div></td></tr>`; }).join('')}
+      <td><div class="rng">${i===0 ? '<span>0,00</span>' : `<input class="in num" data-pred="${i}" data-f="batas" value="${h(fmtIn(pred[i].batas))}" inputmode="decimal" aria-label="Batas bawah ${h(pred[i].label)}"${dis}>`}<span class="muted">s/d</span><span>${fmt(hi)}</span></div></td></tr>`; }).join('')}
     </tbody></table></div>
-    <p class="small muted" style="margin-top:10px">Nilai tepat di batas atas termasuk predikat tersebut. Contoh: ${fmt(pred[2].batas)} = ${h(pred[1].label)}, sedangkan ${fmt(pred[2].batas+0.01)} = ${h(pred[2].label)}.</p>
+    <p class="small muted" style="margin-top:10px">Nilai tepat di batas bawah termasuk predikat tersebut. Contoh: ${fmt(pred[2].batas)} = ${h(pred[2].label)}, sedangkan ${fmt(pred[2].batas-0.01)} = ${h(pred[1].label)}.</p>
       </section>
   </div>
   <section class="panel"><div class="row"><div style="flex:1;min-width:240px"><h2>Mata pelatihan & komponen penilaian</h2>
@@ -929,7 +929,7 @@ async function exportXlsx(){
   const nNA = c.cols.na.n;
   const sum = [['RINGKASAN HASIL PENILAIAN'],[d.judul||''],[],
     ['Jumlah peserta', c.rows.length],['Lulus', c.rows.filter(r=>r.status==='Lulus').length],['Tidak Lulus', c.rows.filter(r=>r.status==='Tidak Lulus').length],['Nilai belum lengkap', c.rows.filter(r=>r.miss).length],[],
-    ['Tanggal', d.tanggal||''],['Bobot nilai akhir', `Post Test ${c.B.post||0}%, Penugasan ${c.B.pen||0}%, Kehadiran ${c.B.had||0}%`],['Lulus jika nilai akhir di atas', c.lulus],[],
+    ['Tanggal', d.tanggal||''],['Bobot nilai akhir', `Post Test ${c.B.post||0}%, Penugasan ${c.B.pen||0}%, Kehadiran ${c.B.had||0}%`],['Nilai minimal lulus', c.lulus],[],
     ['Distribusi predikat','Rentang nilai akhir','Jumlah','%'], ...c.pred.map((p,i) => [p.label, rentangTxt(c.pred,i), c.dist[i], nNA ? Math.round(c.dist[i]/nNA*1000)/10 : '']).reverse(),[],
     ['Peserta terbaik','Nama','Asal Instansi','Post Test','Rata-rata Penugasan','Nilai Akhir'], ...c.best.map((r,i) => [i+1, r.p.nama, r.p.instansi||'', r2(r.post), r2(r.pen), r2(r.na)]),[],
     ['Komponen','Jenis','Nama Mata Pelatihan','Terendah','Tertinggi','Rata-rata'],
