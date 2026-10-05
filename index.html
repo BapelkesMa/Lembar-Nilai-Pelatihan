@@ -34,14 +34,22 @@ html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
-header.top{border-bottom:1px solid var(--line);background:var(--surface)}
-header.top .wrap{display:flex;align-items:center;gap:14px;min-height:60px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;cursor:pointer;background:none;border:0;padding:0}
+.wrap{max-width:1360px;margin:0 auto;padding:0 20px}
+header.top{background:var(--band);color:var(--on-band);position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+header.top .wrap{display:flex;align-items:center;gap:12px;min-height:58px;flex-wrap:wrap}
+header.top .btn{background:transparent;border-color:rgba(255,255,255,.28);color:var(--on-band)}
+header.top .btn:hover{border-color:#fff}
+header.top .btn.ghost{border-color:transparent;color:rgba(255,255,255,.8)}
+header.top .pill{background:rgba(255,255,255,.14);color:var(--on-band)}
+header.top .pill.ok{background:rgba(120,220,160,.22);color:#D7F5E2}
+header.top .pill.warn{background:#F6D58C;color:#5A3B00}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;cursor:pointer;background:none;border:0;padding:0;color:var(--on-band)}
 .brand .mark{width:30px;height:30px;border-radius:7px;background:var(--teal);display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:6px}
 .brand .mark i{background:rgba(255,255,255,.85);border-radius:1px}
 .brand .mark i:nth-child(2n){opacity:.45}
-.brand small{display:block;font-weight:500;color:var(--muted);font-size:12px;letter-spacing:0}
+.brand small{display:block;font-weight:500;color:rgba(255,255,255,.7);font-size:12px;letter-spacing:0;text-align:left}
+.brand>span:last-child{text-align:left;line-height:1.25;color:var(--on-band)}
+.brand .mark{background:rgba(255,255,255,.16)}
 .spacer{flex:1}
 .pill{font-size:12px;padding:3px 10px;border-radius:99px;background:var(--teal-soft);color:var(--teal-ink);font-weight:600}
 .pill.warn{background:var(--amber-soft);color:var(--amber)}
@@ -68,7 +76,8 @@ p{margin:0 0 10px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
 .stack>*+*{margin-top:18px}
 label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px}
-label.f>input,label.f>select,label.f>textarea{display:block;width:100%;margin-top:4px}
+label.f>input,label.f>select,label.f>textarea{display:block;width:100%;margin-top:4px;font-weight:400;color:var(--ink)}
+.in::placeholder{color:var(--muted);opacity:.65}
 input.in,select.in,textarea.in{background:var(--input);border:1px solid var(--input-line);border-radius:7px;padding:7px 9px;width:100%;min-width:0}
 input.in:disabled{background:transparent;border-color:var(--line)}
 input.num{text-align:center;font-variant-numeric:tabular-nums;max-width:90px}
@@ -138,6 +147,51 @@ details.paste textarea{min-height:140px;font-family:inherit;margin:10px 0}
 .empty{text-align:center;padding:48px 20px;border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
 .kode{font-weight:700;color:var(--teal-ink)}
 .saving{font-size:12px;color:var(--muted)}
+
+/* bands & home */
+:root{--band:#0B4F4C;--band-2:#0F6460;--on-band:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--band:#0C2B29;--band-2:#123B38}}
+:root[data-theme="dark"]{--band:#0C2B29;--band-2:#123B38}
+.hero{background:linear-gradient(180deg,var(--band) 0%,var(--band-2) 100%);color:var(--on-band);padding:44px 0 56px}
+.hero-in{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;align-items:center}
+.hero h1{color:#fff;font-size:clamp(28px,4vw,44px);max-width:18ch;margin-bottom:14px}
+.hero p{color:rgba(255,255,255,.82);max-width:52ch;font-size:16px;margin-bottom:22px}
+.btn.light{background:#fff;color:var(--band);border-color:#fff}
+.btn.light:hover{background:#E8F5F3}
+.btn.lg{padding:11px 20px;font-size:15px}
+.hero .hint{font-size:13px;color:rgba(255,255,255,.65);margin-top:12px}
+.sheet{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:16px 16px 12px;backdrop-filter:blur(2px)}
+.sheet .sh-h{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:10px}
+.sheet .sh-r{display:grid;grid-template-columns:22px 1fr repeat(5,26px) 62px;gap:5px;align-items:center;padding:5px 0;border-top:1px solid rgba(255,255,255,.08)}
+.sheet .sh-r b{font-size:11px;color:rgba(255,255,255,.55);font-weight:600;text-align:center}
+.sheet .nm{height:8px;border-radius:4px;background:rgba(255,255,255,.35)}
+.sheet .cl{height:18px;border-radius:4px;background:#7FD3C9}
+.sheet .tg{font-size:10.5px;font-weight:700;text-align:center;border-radius:99px;padding:2px 0;background:#CDEFD8;color:#1F5C33}
+.sheet .tg.top{background:#F6D58C;color:#5A3B00}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:-30px;position:relative}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;box-shadow:0 6px 18px rgba(11,79,76,.08)}
+.step .n{width:34px;height:34px;border-radius:9px;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center;font-weight:800}
+.step b{display:block;font-size:14.5px;margin-bottom:2px}
+.step span{font-size:13px;color:var(--muted);line-height:1.45}
+.sec-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:34px 0 14px}
+.sec-h h2{font-size:20px;margin:0}
+.sec-h .cnt{font-size:12px;background:var(--teal-soft);color:var(--teal-ink);border-radius:99px;padding:2px 9px;font-weight:700}
+.search{max-width:280px}
+.pcard{position:relative;overflow:hidden;padding-top:22px}
+.pcard::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--teal)}
+.pcard .meta{display:flex;gap:14px;font-size:13px;color:var(--muted)}
+.pcard .meta b{color:var(--ink);font-size:15px;margin-right:3px}
+.pcard:hover{border-color:var(--teal)}
+.empty.compact{padding:28px 20px;display:flex;gap:18px;align-items:center;justify-content:space-between;text-align:left;flex-wrap:wrap;background:var(--surface)}
+footer.foot{border-top:1px solid var(--line);padding:18px 0 28px;font-size:12.5px;color:var(--muted)}
+.idgrid{display:grid;grid-template-columns:2fr 2fr 1.2fr 1fr;gap:0 16px;margin-top:6px}
+@media (max-width:900px){.idgrid{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.idgrid{grid-template-columns:1fr}}
+.dochead{background:var(--surface);border-bottom:1px solid var(--line);padding:24px 0 20px}
+.dochead h1{margin-bottom:4px}
+.dochead .ledger{margin-top:16px}
+.dochead + main{padding-top:0}
+@media (max-width:860px){ .hero-in{grid-template-columns:1fr} .hero-art{display:none} .steps{grid-template-columns:1fr;margin-top:-24px} .hero{padding:32px 0 46px} }
 @media (max-width:640px){ .wrap{padding:0 14px} .panel{padding:16px} th,td{padding:6px 7px} }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
@@ -153,7 +207,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzOExGNZBpCj6_Y49XM-xj9
 /* ======================================================= */
 
 const app = document.getElementById('app');
-const S = { list:null, listErr:null, view:'home', cur:null, doc:null,
+const S = { list:null, listErr:null, view:'home', cur:null, doc:null, q:'',
   tab:'pengaturan', kSel:null, drafts:{}, toast:null,
   pending:null, inflight:false, saving:'idle', saveErr:'', savedAt:null, busy:false, seq:0 };
 const JENIS = ['Penugasan','Studi Kasus','Roleplay','Praktik','Presentasi','Simulasi','Diskusi Kelompok','Rencana Tindak Lanjut'];
@@ -296,27 +350,48 @@ function header(){
     ${S.view==='doc' ? `<button class="btn sm" data-a="export">Unduh Excel</button><button class="btn ghost sm" data-a="logout">Daftar pelatihan</button>` : ''}
   </div></header>`;
 }
+function heroArt(){
+  const rows = [[92,88,90,86,94,'top'],[85,90,84,88,86,''],[88,82,86,90,84,''],[80,86,82,84,88,''],[84,80,88,82,86,'']];
+  const col = v => `rgba(127,211,201,${(0.35 + (v-78)/16*0.65).toFixed(2)})`;
+  return `<div class="hero-art" aria-hidden="true"><div class="sheet">
+    <div class="sh-h"><span>Rekap nilai</span><span>Nilai akhir</span></div>
+    <div class="sh-r"><b></b><b style="text-align:left">Peserta</b><b>MP1</b><b>MP2</b><b>MP3</b><b>MP4</b><b>MP5</b><b></b></div>
+    ${rows.map((r,i) => `<div class="sh-r"><b>${i+1}</b><span class="nm" style="width:${88-i*9}%"></span>${r.slice(0,5).map(v => `<span class="cl" style="background:${col(v)}"></span>`).join('')}<span class="tg${r[5]?' top':''}">${r[5]?'Terbaik':'Lulus'}</span></div>`).join('')}
+  </div></div>`;
+}
 function viewHome(){
   if (!API_URL) return `<main><div class="wrap"><div class="empty"><h2 style="color:var(--ink)">Server belum dihubungkan</h2><p>Isi <b>API_URL</b> di bagian atas file <code>index.html</code> dengan URL Web App Google Apps Script, lalu unggah ulang ke GitHub. Langkahnya ada di README.</p></div></div></main>`;
-  const L = S.list;
-  const cards = (L||[]).map(p => {
+  const L = S.list, q = S.q.trim().toLowerCase();
+  const shown = (L||[]).filter(p => !q || (p.judul+' '+p.tanggal+' '+p.tempat).toLowerCase().includes(q));
+  const cards = shown.map(p => {
     const pct = p.nPeserta && p.nKomponen ? Math.min(100, Math.round(p.nNilai / (p.nPeserta*p.nKomponen) * 100)) : 0;
     return `<article class="pcard">
       <h3>${h(p.judul || 'Tanpa judul')}</h3>
       <div class="small muted">${h([p.tanggal, p.tempat].filter(Boolean).join(', ') || 'Tanggal belum diisi')}</div>
-      <div class="small">${p.nPeserta} peserta, ${p.nKomponen} komponen penilaian</div>
+      <div class="meta"><span><b>${p.nPeserta}</b>peserta</span><span><b>${p.nKomponen}</b>komponen nilai</span></div>
       <div><div class="meter${pct>=100?' full':''}"><i style="width:${pct}%"></i></div><div class="small muted" style="margin-top:4px">${pct}% nilai fasilitator terisi</div></div>
-      <div class="row"><button class="btn primary sm" data-a="open" data-id="${h(p.id)}">Buka</button></div>
+      <div class="row"><button class="btn primary sm" data-a="open" data-id="${h(p.id)}">Buka pelatihan</button></div>
     </article>`; }).join('');
-  return `<main><div class="wrap">
-    ${S.listErr ? `<div class="banner">${h(S.listErr)} <button class="btn sm" data-a="reload">Muat ulang</button></div>` : ''}
-    <div class="row" style="align-items:flex-end;margin-bottom:22px">
-      <div style="flex:1;min-width:260px"><h1>Penilaian peserta, satu tempat untuk setiap pelatihan</h1>
-      <p class="muted" style="max-width:62ch">Panitia mengatur pelatihan dan mengisi data peserta, Fasilitator mengisi nilai mata pelatihannya. Rekap, peringkat, dan peserta terbaik terhitung otomatis.</p></div>
-      <button class="btn primary" data-a="new">Buat pelatihan baru</button>
-    </div>
-    ${L===null ? '<p class="muted">Memuat daftar pelatihan…</p>' : L.length ? `<div class="cards">${cards}</div>` : `<div class="empty"><h2 style="color:var(--ink)">Belum ada pelatihan</h2><p>Mulai dengan membuat pelatihan pertama.</p></div>`}
-  </div></main>`;
+  const steps = [['Panitia menyiapkan','Buat pelatihan, atur bobot nilai, daftar mata pelatihan, dan data peserta.'],
+                 ['Fasilitator mengisi nilai','Pilih mata pelatihan yang diampu, isi nilai per peserta. Tersimpan otomatis.'],
+                 ['Rekap jadi sendiri','Nilai akhir, predikat, peringkat, dan peserta terbaik siap diunduh ke Excel.']];
+  return `<section class="hero"><div class="wrap hero-in">
+      <div><h1>Penilaian peserta pelatihan, tanpa menyusun ulang form</h1>
+      <p>Satu tempat untuk semua pelatihan Bapelkes Mataram. Jumlah peserta dan mata pelatihan bebas, perhitungan selalu konsisten.</p>
+      <button class="btn light lg" data-a="new">Buat pelatihan baru</button>
+      <div class="hint">Atau buka pelatihan yang sudah ada di bawah.</div></div>
+      ${heroArt()}
+    </div></section>
+  <main><div class="wrap">
+    <div class="steps">${steps.map((x,i) => `<div class="step"><span class="n">${i+1}</span><div><b>${x[0]}</b><span>${x[1]}</span></div></div>`).join('')}</div>
+    <div class="sec-h"><h2>Daftar pelatihan</h2>${L&&L.length?`<span class="cnt">${L.length}</span>`:''}<span class="spacer"></span>
+      ${L&&L.length>3?`<input class="in search" id="q" placeholder="Cari judul atau tanggal" value="${h(S.q)}" aria-label="Cari pelatihan">`:''}</div>
+    ${S.listErr ? `<div class="banner">${h(S.listErr)} <button class="btn sm" data-a="reload">Coba lagi</button></div>` : ''}
+    ${L===null ? '<p class="muted">Memuat daftar pelatihan…</p>'
+      : !L.length ? `<div class="empty compact"><div><h3 style="margin:0 0 4px;color:var(--ink)">Belum ada pelatihan</h3><span>Pelatihan yang dibuat akan tampil di sini, lengkap dengan progres pengisian nilainya.</span></div><button class="btn primary" data-a="new">Buat pelatihan pertama</button></div>`
+      : shown.length ? `<div class="cards">${cards}</div>` : '<p class="muted">Tidak ada pelatihan yang cocok dengan pencarian.</p>'}
+  </div></main>
+  <footer class="foot"><div class="wrap">Lembar Nilai Pelatihan, Bapelkes Mataram. Data tersimpan di Google Sheet milik Bapelkes.</div></footer>`;
 }
 function viewNew(){
   const L = S.list || [];
@@ -356,11 +431,12 @@ function viewPelatihan(){
   else if (S.tab==='nilai') body = tabNilai(pid,d,c);
   else if (S.tab==='rekap') body = tabRekap(pid,d,c);
   else body = tabRingkasan(pid,d,c);
-  return `<main><div class="wrap">
+  return `<section class="dochead"><div class="wrap">
     <h1>${h(d.judul || 'Tanpa judul')}</h1>
     <div class="muted">${h([d.penyelenggara, d.tanggal, d.tempat].filter(Boolean).join(' | ') || 'Lengkapi identitas pelatihan di tab Pengaturan')}</div>
     ${nP ? `<div class="ledger">${panitia}${ledger}</div>` : ''}
-    <nav class="tabs" role="tablist">${tabs.map(([k,l,n]) => `<button role="tab" aria-selected="${S.tab===k}" data-a="tab" data-id="${k}">${l}${n!==undefined?`<span class="cnt">${n}</span>`:''}</button>`).join('')}</nav>
+  </div></section><main><div class="wrap">
+    <nav class="tabs" role="tablist" style="margin-top:0">${tabs.map(([k,l,n]) => `<button role="tab" aria-selected="${S.tab===k}" data-a="tab" data-id="${k}">${l}${n!==undefined?`<span class="cnt">${n}</span>`:''}</button>`).join('')}</nav>
     ${body}
   </div></main>`;
 }
@@ -381,13 +457,13 @@ function tabPengaturan(pid,d,c){
       <button class="btn ghost sm" data-a="kTwin" data-id="${k.id}" title="Tambah jenis penilaian lain untuk MP ini">+ jenis</button>
       <button class="btn ghost sm" data-a="kDel" data-id="${k.id}" aria-label="Hapus komponen" style="color:var(--red)">Hapus</button>`:''}</td></tr>`).join('');
   return `<div class="stack">
-  <div class="grid2">
-    <section class="panel"><h2>Identitas pelatihan</h2><p class="small muted">Tampil di judul rekap dan file Excel.</p>
-      <label class="f">Judul pelatihan ${inp('judul', d.judul, {label:'Judul'})}</label>
+  <section class="panel"><h2>Identitas pelatihan</h2><p class="small muted">Tampil di judul rekap dan file Excel.</p>
+      <div class="idgrid"><label class="f">Judul pelatihan ${inp('judul', d.judul, {label:'Judul'})}</label>
       <label class="f">Penyelenggara / kerjasama ${inp('penyelenggara', d.penyelenggara, {ph:'Kerjasama Bapelkes Mataram dengan …', label:'Penyelenggara'})}</label>
-      <div class="row" style="align-items:flex-start"><label class="f" style="flex:1;min-width:160px">Tanggal ${inp('tanggal', d.tanggal, {ph:'27 Juli s/d 1 Agustus 2026', label:'Tanggal'})}</label>
-      <label class="f" style="flex:1;min-width:160px">Tempat ${inp('tempat', d.tempat, {ph:'Bapelkes Mataram', label:'Tempat'})}</label></div>
-    </section>
+      <label class="f">Tanggal ${inp('tanggal', d.tanggal, {ph:'27 Juli s/d 1 Agustus 2026', label:'Tanggal'})}</label>
+      <label class="f">Tempat ${inp('tempat', d.tempat, {ph:'Bapelkes Mataram', label:'Tempat'})}</label></div>
+  </section>
+  <div class="grid2">
     <section class="panel"><h2>Nilai akhir & kelulusan</h2>
       <p class="small muted">Nilai Akhir = Post Test × bobot + Rata-rata Penugasan × bobot + Kehadiran × bobot.</p>
       <div class="row">
@@ -403,13 +479,13 @@ function tabPengaturan(pid,d,c){
       </div>
       <p class="small muted">Kosongkan kehadiran minimal bila kehadiran bukan syarat lulus.</p>
     </section>
-  </div>
-  <section class="panel"><h2>Predikat</h2><p class="small muted">Predikat ditentukan dari nilai akhir di atas batas. Batas harus naik.</p>
-    <div class="scroll" style="max-width:560px"><table><thead><tr><th>Nilai akhir di atas</th><th>Predikat</th></tr></thead><tbody>
+    <section class="panel"><h2>Predikat</h2><p class="small muted">Predikat ditentukan dari nilai akhir di atas batas. Batas harus naik.</p>
+    <div class="scroll" ><table><thead><tr><th>Nilai akhir di atas</th><th>Predikat</th></tr></thead><tbody>
     ${pred.map((x,i) => `<tr><td>${i===0?'<span class="muted small">di bawah batas berikutnya</span>':`<input class="in num" data-pred="${i}" data-f="batas" value="${h(fmtIn(x.batas))}" inputmode="decimal" aria-label="Batas predikat ${i}"${isP()?'':' disabled'}>`}</td>
       <td><input class="in" data-pred="${i}" data-f="label" value="${h(x.label)}" aria-label="Nama predikat ${i}"${isP()?'':' disabled'}></td></tr>`).join('')}
     </tbody></table></div>
-  </section>
+      </section>
+  </div>
   <section class="panel"><div class="row"><div style="flex:1;min-width:240px"><h2>Mata pelatihan & komponen penilaian</h2>
     <p class="small muted" style="max-width:70ch">Satu baris = satu kolom nilai yang diisi fasilitator. MP dengan dua jenis penilaian ditulis dua baris dengan kode yang sama (pakai tombol “+ jenis”). Bobot kosong = 1; isi 0,5 untuk tiap jenis jika setiap MP ingin dihitung setara.</p></div>
     ${isP()?'<button class="btn primary" data-a="kAdd">Tambah mata pelatihan</button>':''}</div>
@@ -532,6 +608,7 @@ function render(){
   const paste = {}; app.querySelectorAll('textarea[id]').forEach(t => paste[t.id] = t.value);
   const open = {}; app.querySelectorAll('details.paste').forEach((dt,i) => open[i] = dt.open);
   const formVals = {}; app.querySelectorAll('form[data-form] [name]').forEach(el => formVals[el.closest('form').dataset.form+':'+el.name] = el.value);
+  const aid = a && a.id === 'q' ? 'q' : null;
   const focusName = a && a.name && a.closest && a.closest('form[data-form]') ? a.closest('form').dataset.form+':'+a.name : null;
   const body = (S.view==='doc' && S.doc) ? viewPelatihan() : S.view==='new' ? viewNew() : viewHome();
   app.innerHTML = header() + body;
@@ -544,11 +621,11 @@ function render(){
       ? app.querySelector(`[data-pred="${key[4]}"][data-f="${key.slice(5)}"]`)
       : app.querySelector(`[data-k="${CSS.escape(key)}"]`);
     if (el) { el.focus(); try { el.setSelectionRange(ss, se); } catch(e){} }
-  }
+  } else if (aid) { const el = document.getElementById(aid); if (el) { el.focus(); try { el.setSelectionRange(ss, se); } catch(e){} } }
 }
 
 /* ---------- events ---------- */
-app.addEventListener('input', e => { const k = e.target.dataset.k; if (k) S.drafts[k] = e.target.value; });
+app.addEventListener('input', e => { if (e.target.id === 'q') { S.q = e.target.value; render(); return; } const k = e.target.dataset.k; if (k) S.drafts[k] = e.target.value; });
 app.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.matches('input.in') && !e.target.closest('form')) {
     e.preventDefault();
