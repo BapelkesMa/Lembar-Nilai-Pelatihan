@@ -192,6 +192,9 @@ details.paste textarea{min-height:140px;font-family:inherit;margin:10px 0}
 .pcard:hover{border-color:var(--teal)}
 .empty.compact{padding:28px 20px;display:flex;gap:18px;align-items:center;justify-content:space-between;text-align:left;flex-wrap:wrap;background:var(--surface)}
 footer.foot{border-top:1px solid var(--line);padding:18px 0 28px;font-size:12.5px;color:var(--muted)}
+.syarat{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0 12px}
+.syarat input.num{max-width:none}
+@media (max-width:700px){.syarat{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .rng{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
 .idgrid{display:grid;grid-template-columns:2fr 2fr 1fr 1fr 1.2fr;gap:0 16px;margin-top:6px}
 @media (max-width:1100px){.idgrid{grid-template-columns:1fr 1fr 1fr}}
@@ -204,6 +207,7 @@ footer.foot{border-top:1px solid var(--line);padding:18px 0 28px;font-size:12.5p
 @media (max-width:860px){ .hero-in{grid-template-columns:1fr} .hero-art{display:none} .steps{grid-template-columns:1fr;margin-top:-24px} .hero{padding:32px 0 46px} }
 
 .cellw{position:relative;display:inline-block}
+.cellw.full{display:block}
 .fh{position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;background:var(--teal);border:2px solid var(--surface);border-radius:3px;cursor:ns-resize;touch-action:none;z-index:2}
 .fh.demo{position:relative;display:inline-block;right:auto;bottom:auto;vertical-align:-1px;cursor:default}
 tr.fillsel input.in{background:var(--teal-soft);border-color:var(--teal)}
@@ -343,40 +347,53 @@ window.addEventListener('beforeunload', e => {
 });
 
 /* ---------- calculation ---------- */
+const kelOf = k => (k.kelompok === 'prak' || k.kelompok === 'pen') ? k.kelompok : (/prakt|praktek/i.test(k.jenis||'') ? 'prak' : 'pen');
 function hitung(d){
-  const B = d.bobot || {post:30,pen:70,had:0};
-  const bp=(+B.post||0)/100, bt=(+B.pen||0)/100, bk=(+B.had||0)/100;
+  const B = d.bobot || {post:30,pen:70,prak:0};
+  const bp=(+B.post||0)/100, bt=(+B.pen||0)/100, bk=(+B.prak||0)/100;
   const pred = (Array.isArray(d.predikat) && d.predikat.length===4) ? d.predikat : DEF_PRED;
-  const lulus = isNum(d.lulus) ? d.lulus : 70;
-  const hadMin = isNum(d.hadirMin) ? d.hadirMin : null;
-  const kom = list(d.komponen).filter(k => (k.kode||'').trim() || (k.nama||'').trim()).map(k => ({...k, w: isNum(k.bobot) ? k.bobot : 1}));
+  const nz = v => isNum(v) ? v : null;
+  const syarat = {na: nz(d.lulus), post: nz(d.minPost), pen: nz(d.minPen), prak: nz(d.minPrak), had: nz(d.hadirMin)};
+  const SYARAT_LBL = {na:'Nilai akhir', post:'Post Test', pen:'Penugasan', prak:'Praktik', had:'Kehadiran'};
+  const kom = list(d.komponen).filter(k => (k.kode||'').trim() || (k.nama||'').trim()).map(k => ({...k, w: isNum(k.bobot) ? k.bobot : 1, kel: kelOf(k)}));
+  const hasPrak = kom.some(k => k.kel==='prak');
   const pes = list(d.peserta).filter(p => (p.nama||'').trim());
-  const needHad = bk>0 || hadMin!==null;
+  const needHad = syarat.had!==null;
+  const avgKel = (vals, kel) => { let s=0, sw=0, need=0, got=0; vals.forEach((v,j) => { const k = kom[j]; if (k.kel!==kel || !(k.w>0)) return; need++; if (v!==null){ s+=v*k.w; sw+=k.w; got++; } }); return {v: sw>0 ? s/sw : null, done: need>0 && got===need, need}; };
   const rows = pes.map((p,i) => {
-    const pre = isNum(p.pre)?p.pre:null, post = isNum(p.post)?p.post:null, had = isNum(p.hadir)?p.hadir:null;
+    const pre = nz(p.pre), post = nz(p.post), had = nz(p.hadir);
     const prog = (pre!==null && post!==null && pre<100) ? (post-pre)/(100-pre)*100 : null;
     const vals = kom.map(k => { const v = d.nilai && d.nilai[k.id] && d.nilai[k.id][p.id]; return isNum(v)?v:null; });
-    let s=0, sw=0; vals.forEach((v,j) => { if(v!==null && kom[j].w>0){ s+=v*kom[j].w; sw+=kom[j].w; } });
-    const pen = sw>0 ? s/sw : null;
-    // nilai akhir dihitung dari komponen yang sudah masuk; bobot disesuaikan bila ada yang belum terisi
+    const P = avgKel(vals,'pen'), K = avgKel(vals,'prak');
+    const pen = P.v, prak = K.v;
+    // nilai akhir dari komponen yang sudah masuk; bobot disesuaikan bila ada yang belum terisi
     let sv = 0, sb = 0;
     if (bp>0 && post!==null) { sv += post*bp; sb += bp; }
     if (bt>0 && pen!==null) { sv += pen*bt; sb += bt; }
-    if (bk>0 && had!==null) { sv += had*bk; sb += bk; }
+    if (bk>0 && prak!==null) { sv += prak*bk; sb += bk; }
     const na = sb>0 ? Math.round(sv/sb*100)/100 : null;
     let pi = null, predikat = '';
     if (na!==null){ pi = [1,2,3].filter(j => isNum(pred[j].batas) && pred[j].batas <= na).length; predikat = pred[pi].label; }
-    const status = na===null ? '' : ((na >= lulus && (hadMin===null || had===null || had >= hadMin)) ? 'Lulus' : 'Tidak Lulus');
     const miss = kom.filter((k,j) => k.w>0 && vals[j]===null).length + (pre===null) + (post===null) + (needHad && had===null);
-    return {no:i+1, p, pre, post, had, prog, vals, pen, na, pi, predikat, status, miss, prov: na!==null && miss>0};
+    // syarat kelulusan: hanya yang diisi di Pengaturan
+    const naDone = (bp===0 || post!==null) && (bt===0 || P.done || P.need===0) && (bk===0 || K.done || K.need===0) && na!==null;
+    const cek = {na:[na, naDone], post:[post, post!==null], pen:[pen, P.done], prak:[prak, K.done], had:[had, had!==null]};
+    const gagal = [], tunggu = [];
+    Object.keys(syarat).forEach(x => { const min = syarat[x]; if (min===null) return; const [v, final] = cek[x];
+      if (v!==null && final && v < min) gagal.push(`${SYARAT_LBL[x]} < ${fmt(min,x==='had'?0:2)}${x==='had'?'%':''}`);
+      else if (!final) tunggu.push(SYARAT_LBL[x]); });
+    const adaSyarat = Object.values(syarat).some(v => v!==null);
+    const status = !adaSyarat ? '' : gagal.length ? 'Tidak Lulus' : tunggu.length ? 'Belum lengkap' : 'Lulus';
+    const alasan = gagal.length ? gagal.join(', ') : tunggu.length ? 'menunggu ' + tunggu.join(', ') : '';
+    return {no:i+1, p, pre, post, had, prog, vals, pen, prak, na, pi, predikat, status, alasan, miss, prov: na!==null && !naDone};
   });
   rows.forEach(r => { r.rank = r.na===null ? null : 1 + rows.filter(o => o.na!==null && o.na > r.na).length; });
-  const best = rows.filter(r => r.status==='Lulus').sort((a,b) => b.na-a.na || (b.post||0)-(a.post||0) || a.no-b.no).slice(0, Math.max(1, Math.min(10, d.nTop||3)));
+  const best = rows.filter(r => r.na!==null && r.status!=='Tidak Lulus').sort((a,b) => b.na-a.na || (b.post||0)-(a.post||0) || a.no-b.no).slice(0, Math.max(1, Math.min(10, d.nTop||3)));
   const cols = {pre: stat(rows.map(r=>r.pre)), post: stat(rows.map(r=>r.post)), prog: stat(rows.map(r=>r.prog)),
-    kom: kom.map((k,j) => stat(rows.map(r=>r.vals[j]))), pen: stat(rows.map(r=>r.pen)), had: stat(rows.map(r=>r.had)), na: stat(rows.map(r=>r.na))};
+    kom: kom.map((k,j) => stat(rows.map(r=>r.vals[j]))), pen: stat(rows.map(r=>r.pen)), prak: stat(rows.map(r=>r.prak)), had: stat(rows.map(r=>r.had)), na: stat(rows.map(r=>r.na))};
   const dist = pred.map((x,i) => rows.filter(r => r.pi===i).length);
-  const totalB = (+B.post||0)+(+B.pen||0)+(+B.had||0);
-  return {kom, pes, rows, best, cols, dist, pred, lulus, hadMin, B, totalB, needHad};
+  const totalB = (+B.post||0)+(+B.pen||0)+(+B.prak||0);
+  return {kom, pes, rows, best, cols, dist, pred, syarat, B, totalB, needHad, hasPrak};
 }
 
 /* ---------- views ---------- */
@@ -486,6 +503,7 @@ function tabPengaturan(pid,d,c){
     <td style="min-width:240px">${inp(`komponen/${k.id}/nama`, k.nama, {ph:'Nama mata pelatihan', label:'Nama MP'})}</td>
     <td style="min-width:150px">${inp(`komponen/${k.id}/jenis`, k.jenis, {ph:'Studi Kasus', list:'jenisList', label:'Jenis penilaian'})}</td>
     <td style="min-width:150px">${inp(`komponen/${k.id}/fasilitator`, k.fasilitator, {ph:'Nama fasilitator', label:'Fasilitator'})}</td>
+    <td style="min-width:130px"><select class="in" data-kel="${k.id}" aria-label="Dihitung sebagai"${isP()?'':' disabled'}><option value="pen"${kelOf(k)==='pen'?' selected':''}>Penugasan</option><option value="prak"${kelOf(k)==='prak'?' selected':''}>Praktik</option></select></td>
     <td>${inp(`komponen/${k.id}/bobot`, k.bobot, {num:true, ph:'1', label:'Bobot'})}</td>
     <td class="c" style="white-space:nowrap">${isP()?`
       <button class="btn ghost sm" data-a="kUp" data-id="${k.id}" aria-label="Naikkan"${i===0?' disabled':''}>▲</button>
@@ -503,19 +521,27 @@ function tabPengaturan(pid,d,c){
   </section>
   <div class="grid2">
     <section class="panel"><h2>Nilai akhir & kelulusan</h2>
-      <p class="small muted">Nilai Akhir = Post Test × bobot + Rata-rata Penugasan × bobot + Kehadiran × bobot.</p>
+      <h3 style="margin-top:10px">Bobot nilai akhir</h3>
+      <p class="small muted">Nilai Akhir = Post Test × bobot + Rata-rata Penugasan × bobot + Rata-rata Praktik × bobot.</p>
       <div class="row">
         <label class="f">Post Test (%) ${inp('bobot/post', B.post, {num:true, max:100, label:'Bobot post test'})}</label>
         <label class="f">Penugasan (%) ${inp('bobot/pen', B.pen, {num:true, max:100, label:'Bobot penugasan'})}</label>
-        <label class="f">Kehadiran (%) ${inp('bobot/had', B.had, {num:true, max:100, label:'Bobot kehadiran'})}</label>
+        <label class="f">Praktik (%) ${inp('bobot/prak', B.prak, {num:true, max:100, label:'Bobot praktik'})}</label>
       </div>
       ${Math.abs(c.totalB-100)>0.001 ? `<p class="tag no">Total bobot ${fmt(c.totalB,0)}%, harus 100%</p>` : '<p class="tag ok">Total bobot 100%</p>'}
-      <div class="row">
-        <label class="f">Nilai minimal lulus ${inp('lulus', d.lulus, {num:true, max:100, label:'Batas lulus'})}</label>
-        <label class="f">Kehadiran minimal (%) ${inp('hadirMin', d.hadirMin, {num:true, max:100, ph:'–', label:'Kehadiran minimal'})}</label>
-        <label class="f">Peserta terbaik ditampilkan ${inp('nTop', d.nTop, {num:true, max:10, label:'Jumlah peserta terbaik'})}</label>
+      ${(+B.prak||0)>0 && !c.hasPrak ? '<p class="small" style="color:var(--amber)">Bobot Praktik diisi, tetapi belum ada komponen bertipe Praktik di daftar mata pelatihan di bawah.</p>' : ''}
+      <h3 style="margin-top:16px">Syarat kelulusan</h3>
+      <p class="small muted">Isi nilai minimal untuk syarat yang dipakai; kosongkan yang tidak dipakai. Status <b>Lulus</b> baru muncul setelah semua syarat yang diisi terpenuhi.</p>
+      <div class="syarat">
+        <label class="f">Nilai akhir ${inp('lulus', d.lulus, {num:true, max:100, ph:'–', label:'Nilai akhir minimal'})}</label>
+        <label class="f">Post Test ${inp('minPost', d.minPost, {num:true, max:100, ph:'–', label:'Post test minimal'})}</label>
+        <label class="f">Penugasan ${inp('minPen', d.minPen, {num:true, max:100, ph:'–', label:'Penugasan minimal'})}</label>
+        <label class="f">Praktik ${inp('minPrak', d.minPrak, {num:true, max:100, ph:'–', label:'Praktik minimal'})}</label>
+        <label class="f">Kehadiran (%) ${inp('hadirMin', d.hadirMin, {num:true, max:100, ph:'–', label:'Kehadiran minimal'})}</label>
       </div>
-      <p class="small muted">Peserta lulus jika nilai akhir ${fmt(c.lulus)} atau lebih. Kosongkan kehadiran minimal bila kehadiran bukan syarat lulus.</p>
+      <p class="small muted">${(() => { const L = {na:'nilai akhir',post:'Post Test',pen:'rata-rata Penugasan',prak:'rata-rata Praktik',had:'kehadiran'}; const a = Object.keys(c.syarat).filter(x => c.syarat[x]!==null).map(x => `${L[x]} ≥ ${fmt(c.syarat[x], x==='had'?0:2)}${x==='had'?'%':''}`);
+        return a.length ? 'Peserta lulus jika ' + a.join(', ').replace(/, ([^,]*)$/, ' dan $1') + '.' : '<span style="color:var(--amber)">Belum ada syarat kelulusan; kolom Status di Rekap akan kosong.</span>'; })()}</p>
+      <label class="f" style="max-width:220px;margin-top:6px">Peserta terbaik ditampilkan ${inp('nTop', d.nTop, {num:true, max:10, label:'Jumlah peserta terbaik'})}</label>
     </section>
     <section class="panel"><h2>Predikat</h2><p class="small muted">Ubah angka batas bawah bila diperlukan; batas atas menyesuaikan otomatis.</p>
     <div class="scroll"><table><thead><tr><th>Predikat</th><th>Rentang nilai akhir</th></tr></thead><tbody>
@@ -527,9 +553,9 @@ function tabPengaturan(pid,d,c){
       </section>
   </div>
   <section class="panel"><div class="row"><div style="flex:1;min-width:240px"><h2>Mata pelatihan & komponen penilaian</h2>
-    <p class="small muted" style="max-width:70ch">Satu baris = satu kolom nilai yang diisi fasilitator. MP dengan dua jenis penilaian ditulis dua baris dengan kode yang sama (pakai tombol “+ jenis”). Bobot kosong = 1; isi 0,5 untuk tiap jenis jika setiap MP ingin dihitung setara.</p></div>
+    <p class="small muted" style="max-width:70ch">Satu baris = satu kolom nilai yang diisi fasilitator. MP dengan dua jenis penilaian ditulis dua baris dengan kode yang sama (pakai tombol “+ jenis”). Kolom <b>Dihitung sebagai</b> menentukan apakah nilai masuk rata-rata Penugasan atau rata-rata Praktik (jenis “Praktik” otomatis masuk Praktik). Bobot kosong = 1; isi 0,5 untuk tiap jenis jika setiap MP ingin dihitung setara.</p></div>
     ${isP()?'<button class="btn primary" data-a="kAdd">Tambah mata pelatihan</button>':''}</div>
-    ${kom.length ? `<div class="scroll" style="margin-top:10px"><table><thead><tr><th class="c">No</th><th>Kode</th><th>Nama mata pelatihan</th><th>Jenis penilaian</th><th>Fasilitator</th><th>Bobot</th><th></th></tr></thead><tbody>${krows}</tbody></table></div>`
+    ${kom.length ? `<div class="scroll" style="margin-top:10px"><table><thead><tr><th class="c">No</th><th>Kode</th><th>Nama mata pelatihan</th><th>Jenis penilaian</th><th>Fasilitator</th><th>Dihitung sebagai</th><th>Bobot</th><th></th></tr></thead><tbody>${krows}</tbody></table></div>`
       : '<div class="empty" style="margin-top:10px">Belum ada mata pelatihan. Tambahkan MP yang dinilai lewat penugasan.</div>'}
     <datalist id="jenisList">${JENIS.map(j=>`<option value="${h(j)}">`).join('')}</datalist>
   </section>
@@ -541,23 +567,22 @@ const PF = ['nama','instansi','profesi','pre','post','hadir'];
 const PF_NUM = {pre:1, post:1, hadir:1};
 function tabPeserta(pid,d,c){
   const pes = list(d.peserta);
+  const fh = (i, f) => isP() ? `<span class="fh" data-fh="${i}" data-pf="${f}" title="Tarik ke bawah untuk menyalin"></span>` : '';
+  const cell = (p, i, f, opt, w) => `<td${w?` style="min-width:${w}px"`:' class="c"'}><span class="cellw${opt.num?'':' full'}">${inp(`peserta/${p.id}/${f}`, p[f], opt)}${fh(i,f)}</span></td>`;
   const rows = pes.map((p,i) => `<tr>
     <td class="c muted">${i+1}</td>
-    <td style="min-width:200px">${inp(`peserta/${p.id}/nama`, p.nama, {label:'Nama'})}</td>
-    <td style="min-width:200px">${inp(`peserta/${p.id}/instansi`, p.instansi, {label:'Instansi'})}</td>
-    <td style="min-width:160px">${inp(`peserta/${p.id}/profesi`, p.profesi, {label:'Profesi'})}</td>
-    <td>${inp(`peserta/${p.id}/pre`, p.pre, {num:true, max:100, label:'Pre test'})}</td>
-    <td>${inp(`peserta/${p.id}/post`, p.post, {num:true, max:100, label:'Post test'})}</td>
-    <td>${inp(`peserta/${p.id}/hadir`, p.hadir, {num:true, max:100, label:'Kehadiran'})}</td>
+    ${cell(p,i,'nama',{label:'Nama'},200)}${cell(p,i,'instansi',{label:'Instansi'},200)}${cell(p,i,'profesi',{label:'Profesi'},160)}
+    ${cell(p,i,'pre',{num:true, max:100, label:'Pre test'})}${cell(p,i,'post',{num:true, max:100, label:'Post test'})}${cell(p,i,'hadir',{num:true, max:100, label:'Kehadiran'})}
     <td>${isP()?`<button class="btn ghost sm" data-a="pDel" data-id="${p.id}" style="color:var(--red)" aria-label="Hapus peserta">Hapus</button>`:''}</td></tr>`).join('');
-  const ghost = isP() ? `<tr class="ghost"><td class="c muted">+</td>${PF.map((f,i) => `<td><input class="in${PF_NUM[f]?' num':''}" data-new="${f}" ${i===0?'placeholder="Ketik / tempel nama baru"':''} aria-label="Peserta baru: ${f}"${PF_NUM[f]?' inputmode="decimal"':''}></td>`).join('')}<td></td></tr>` : '';
+  const ghost = isP() ? `<tr class="ghost"><td class="c muted">+</td>${PF.map((f,i) => `<td${PF_NUM[f]?' class="c"':''}><input class="in${PF_NUM[f]?' num':''}" data-new="${f}" ${i===0?'placeholder="Ketik / tempel nama baru"':''} aria-label="Peserta baru: ${f}"${PF_NUM[f]?' inputmode="decimal"':''}></td>`).join('')}<td></td></tr>` : '';
   return `<section class="panel">
     <div class="row"><div style="flex:1;min-width:240px"><h2>Data peserta</h2><p class="small muted">Diisi Panitia. Nilai 0–100, desimal boleh pakai koma. Tersimpan otomatis setelah pindah kolom.</p></div>
     ${isP()?`<button class="btn sm" data-a="pSort">Urutkan nama A–Z</button>`:''}</div>
     ${isP()?`<div class="guide" style="position:static;margin:8px 0 14px"><b>Tempel langsung dari Excel</b>
       <ol><li>Di Excel, blok data peserta dengan urutan kolom: <b>Nama, Asal Instansi, Profesi, Pre Test, Post Test, Kehadiran</b> (boleh hanya sebagian kolom), lalu <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
       <li>Klik kotak <b>Nama</b> di baris bertanda <b>+</b> paling bawah, lalu <kbd>Ctrl</kbd>+<kbd>V</kbd>. Semua baris langsung menjadi peserta baru.</li>
-      <li>Untuk mengisi atau memperbaiki satu kolom saja (misalnya Post Test), klik kotak di baris pertama kolom itu lalu tempel. Nilai terisi ke bawah.</li></ol></div>`:''}
+      <li>Untuk mengisi atau memperbaiki satu kolom saja (misalnya Post Test), klik kotak di baris pertama kolom itu lalu tempel. Nilai terisi ke bawah.</li>
+      <li>Isian sama untuk beberapa peserta (misalnya asal instansi)? Isi kotak pertama, lalu tarik kotak kecil <span class="fh demo"></span> di pojoknya ke bawah.</li></ol></div>`:''}
     <div class="scroll"><table><thead><tr><th class="c">No</th><th>Nama lengkap</th><th>Asal instansi</th><th>Profesi</th><th class="c">Pre Test</th><th class="c">Post Test</th><th class="c">Kehadiran (%)</th><th></th></tr></thead><tbody id="pesBody">${rows}${ghost}</tbody></table></div>
     ${!pes.length && !isP() ? '<div class="empty" style="margin-top:10px">Belum ada peserta.</div>' : ''}
   </section>`;
@@ -612,25 +637,25 @@ function tabRekap(pid,d,c){
     <td class="c">${r.no}</td><td class="sticky" style="min-width:180px"><b>${h(r.p.nama)}</b></td><td style="min-width:180px">${h(r.p.instansi||'')}</td><td style="min-width:140px">${h(r.p.profesi||'')}</td>
     <td class="n">${fmt(r.pre)}</td><td class="n">${fmt(r.post)}</td><td class="n${r.prog<0?' neg':''}">${fmt(r.prog)}</td>
     ${r.vals.map(v => `<td class="n">${fmt(v)}</td>`).join('')}
-    <td class="n">${fmt(r.pen)}</td><td class="n">${fmt(r.had)}</td><td class="n"><b>${fmt(r.na)}</b>${r.prov?'<div class="prov">sementara</div>':''}</td>
-    <td>${h(r.predikat)}</td><td>${r.status?`<span class="tag ${r.status==='Lulus'?'ok':'no'}${r.prov?' provt':''}">${r.status}</span>`:''}</td>
+    <td class="n">${fmt(r.pen)}</td>${c.hasPrak?`<td class="n">${fmt(r.prak)}</td>`:''}<td class="n">${fmt(r.had)}</td><td class="n"><b>${fmt(r.na)}</b>${r.prov?'<div class="prov">sementara</div>':''}</td>
+    <td>${h(r.predikat)}</td><td style="min-width:130px">${r.status?`<span class="tag ${r.status==='Lulus'?'ok':r.status==='Tidak Lulus'?'no':'wait'}">${r.status}</span>${r.alasan?`<div class="small muted" style="margin-top:3px">${h(r.alasan)}</div>`:''}`:''}</td>
     <td class="c">${r.rank??'–'}</td><td>${r.miss?`<span class="tag wait">Kurang ${r.miss} nilai</span>`:'<span class="tag ok">Lengkap</span>'}</td></tr>`).join('');
   const sr = (lbl,key) => `<tr><td></td><td class="sticky">${lbl}</td><td></td><td></td>
     ${['pre','post','prog'].map(x => `<td class="n">${fmt(c.cols[x][key])}</td>`).join('')}
     ${c.cols.kom.map(s => `<td class="n">${fmt(s[key])}</td>`).join('')}
-    <td class="n">${fmt(c.cols.pen[key])}</td><td class="n">${fmt(c.cols.had[key])}</td><td class="n">${fmt(c.cols.na[key])}</td><td colspan="4"></td></tr>`;
-  return `<div class="row" style="margin-bottom:12px"><p class="small muted" style="flex:1;margin:0">Terhitung otomatis dari nilai yang sudah masuk. Nilai akhir bertanda <i>sementara</i> berarti masih ada nilai yang belum diisi. Nama mata pelatihan lengkap ada di bawah tabel.</p><button class="btn sm" data-a="export">Unduh Excel</button></div>
+    <td class="n">${fmt(c.cols.pen[key])}</td>${c.hasPrak?`<td class="n">${fmt(c.cols.prak[key])}</td>`:''}<td class="n">${fmt(c.cols.had[key])}</td><td class="n">${fmt(c.cols.na[key])}</td><td colspan="4"></td></tr>`;
+  return `<div class="row" style="margin-bottom:12px"><p class="small muted" style="flex:1;margin:0">Terhitung otomatis dari nilai yang sudah masuk. Nilai akhir bertanda <i>sementara</i> berarti masih ada nilai yang belum diisi. Status <b>Lulus</b> muncul setelah semua syarat kelulusan terpenuhi. Nama mata pelatihan lengkap ada di bawah tabel.</p><button class="btn sm" data-a="export">Unduh Excel</button></div>
   <div class="scroll" data-scroll="rekap"><table>
     <thead><tr><th class="c">No</th><th class="sticky">Nama lengkap</th><th>Asal instansi</th><th>Profesi</th><th class="c">Pre Test</th><th class="c">Post Test</th><th class="c">Progress (%)</th>
-    ${c.kom.map(k => `<th class="c" title="${h(k.nama)}">${h(k.kode||'MP')}<br><span style="font-weight:500">${h(k.jenis||'')}</span></th>`).join('')}
-    <th class="c">Rata-rata Penugasan</th><th class="c">Kehadiran (%)</th><th class="c">Nilai Akhir</th><th>Predikat</th><th>Status</th><th class="c">Peringkat</th><th>Kelengkapan</th></tr></thead>
+    ${c.kom.map(k => `<th class="c" title="${h(k.nama)}">${h(k.kode||'MP')}<br><span style="font-weight:500">${h(k.jenis||'')}</span>${k.kel==='prak'?'<br><span style="font-weight:500;font-size:11px">(praktik)</span>':''}</th>`).join('')}
+    <th class="c">Rata-rata Penugasan</th>${c.hasPrak?'<th class="c">Rata-rata Praktik</th>':''}<th class="c">Kehadiran (%)</th><th class="c">Nilai Akhir</th><th>Predikat</th><th>Status</th><th class="c">Peringkat</th><th>Kelengkapan</th></tr></thead>
     <tbody>${tr}</tbody><tfoot>${sr('Terendah','min')}${sr('Tertinggi','max')}${sr('Rata-rata','avg')}</tfoot></table></div>
   <div class="small muted" style="margin-top:12px;columns:2 320px">${[...new Map(c.kom.map(k=>[k.kode+'|'+k.nama,k])).values()].map(k => `<div><span class="kode">${h(k.kode)}</span> ${h(k.nama)}</div>`).join('')}</div>`;
 }
 
 function tabRingkasan(pid,d,c){
   if (!c.rows.length) return `<div class="empty">Ringkasan muncul setelah peserta diisi.</div>`;
-  const lulus = c.rows.filter(r=>r.status==='Lulus').length, tl = c.rows.filter(r=>r.status==='Tidak Lulus').length, kurang = c.rows.filter(r=>r.miss).length;
+  const lulus = c.rows.filter(r=>r.status==='Lulus').length, tl = c.rows.filter(r=>r.status==='Tidak Lulus').length, blm = c.rows.filter(r=>r.status==='Belum lengkap').length, kurang = c.rows.filter(r=>r.miss).length;
   const nNA = c.cols.na.n;
   const dist = c.pred.map((p,i) => ({p, n:c.dist[i], col:PRED_COL[i]}));
   const brange = i => rentangTxt(c.pred, i);
@@ -641,15 +666,15 @@ function tabRingkasan(pid,d,c){
     <div class="kpi"><b>${c.rows.length}</b><span>peserta</span></div>
     <div class="kpi"><b style="color:var(--green)">${lulus}</b><span>lulus</span></div>
     <div class="kpi"><b style="color:var(--red)">${tl}</b><span>tidak lulus</span></div>
+    <div class="kpi"><b style="color:${blm?'var(--amber)':'inherit'}">${blm}</b><span>status belum lengkap</span></div>
     <div class="kpi"><b>${fmt(c.cols.na.avg)}</b><span>rata-rata nilai akhir</span></div>
-    <div class="kpi"><b style="color:${kurang?'var(--amber)':'inherit'}">${kurang}</b><span>peserta nilainya belum lengkap</span></div>
   </div>
   <div class="grid2">
-    <section class="panel"><h2>Peserta terbaik</h2><p class="small muted">Dari peserta yang lulus. Bila nilai akhir sama, Post Test lebih tinggi didahulukan.</p>
-      ${c.best.length ? `<ol class="podium">${c.best.map((r,i) => `<li><span class="rk">${i+1}</span><div><b>${h(r.p.nama)}</b>${r.prov?' <span class="tag wait">sementara</span>':''}<div class="small muted">${[r.p.instansi ? h(r.p.instansi) : '', 'Post Test '+fmt(r.post), 'Penugasan '+fmt(r.pen)].filter(Boolean).join(' • ')}</div></div><span class="sc">${fmt(r.na)}</span></li>`).join('')}</ol>`
-        : '<p class="muted">Belum ada peserta sudah memiliki nilai akhir.</p>'}
+    <section class="panel"><h2>Peserta terbaik</h2><p class="small muted">Dari peserta yang tidak gugur syarat kelulusan. Bila nilai akhir sama, Post Test lebih tinggi didahulukan.</p>
+      ${c.best.length ? `<ol class="podium">${c.best.map((r,i) => `<li><span class="rk">${i+1}</span><div><b>${h(r.p.nama)}</b>${(r.prov || r.status!=='Lulus')?' <span class="tag wait">sementara</span>':''}<div class="small muted">${[r.p.instansi ? h(r.p.instansi) : '', 'Post Test '+fmt(r.post), 'Penugasan '+fmt(r.pen), c.hasPrak ? 'Praktik '+fmt(r.prak) : ''].filter(Boolean).join(' • ')}</div></div><span class="sc">${fmt(r.na)}</span></li>`).join('')}</ol>`
+        : '<p class="muted">Belum ada peserta yang memiliki nilai akhir.</p>'}
     </section>
-    <section class="panel"><h2>Distribusi predikat</h2><p class="small muted">${nNA} peserta dengan nilai akhir lengkap.</p>
+    <section class="panel"><h2>Distribusi predikat</h2><p class="small muted">${nNA} peserta sudah memiliki nilai akhir.</p>
       <div class="dist" role="img" aria-label="Distribusi predikat">${dist.filter(x=>x.n).map(x => `<i style="flex:${x.n};background:${x.col}" title="${h(x.p.label)}: ${x.n}">${x.n}</i>`).join('') || '<i style="flex:1;background:var(--line)"></i>'}</div>
       <div class="scroll"><table><thead><tr><th>Predikat</th><th>Rentang</th><th class="c">Jumlah</th><th class="c">%</th></tr></thead><tbody>
       ${dist.slice().reverse().map((x,ri) => { const i = 3-ri; return `<tr><td><span class="legend"><span style="--c:${x.col}">${h(x.p.label)}</span></span></td><td class="small">${brange(i)}</td><td class="c">${x.n}</td><td class="c">${nNA?fmt(x.n/nNA*100,1)+'%':'–'}</td></tr>`; }).join('')}
@@ -660,7 +685,7 @@ function tabRingkasan(pid,d,c){
     <div class="scroll"><table><thead><tr><th>Komponen</th><th class="c">Terendah</th><th class="c">Tertinggi</th><th class="c">Rata-rata</th></tr></thead><tbody>
     ${statRow('Pre Test',c.cols.pre)}${statRow('Post Test',c.cols.post)}${statRow('Progress (%)',c.cols.prog)}
     ${c.kom.map((k,j) => statRow(`<span class="kode">${h(k.kode)}</span> ${h(k.jenis||'')}`, c.cols.kom[j], h(k.nama))).join('')}
-    ${statRow('Rata-rata Penugasan',c.cols.pen)}${statRow('Kehadiran (%)',c.cols.had)}${statRow('Nilai Akhir',c.cols.na,'',true)}
+    ${statRow('Rata-rata Penugasan',c.cols.pen)}${c.hasPrak?statRow('Rata-rata Praktik',c.cols.prak):''}${statRow('Kehadiran (%)',c.cols.had)}${statRow('Nilai Akhir',c.cols.na,'',true)}
     </tbody></table></div>
   </section></div>`;
 }
@@ -717,6 +742,7 @@ app.addEventListener('keydown', e => {
 });
 app.addEventListener('change', async e => {
   const t = e.target; const pid = S.cur; if (!pid || !S.doc) return;
+  if (t.dataset.kel) { upd({komponen:{[t.dataset.kel]:{kelompok:t.value}}}); return; }
   if (t.dataset.date !== undefined) {
     const cur = parseTgl(S.doc.tanggal); cur[+t.dataset.date] = t.value;
     if (+t.dataset.date === 0 && (!cur[1] || cur[1] < cur[0])) cur[1] = cur[0];
@@ -885,30 +911,40 @@ app.addEventListener('paste', e => {
   toast(`${n} nilai ditempel${bad?`, ${bad} bukan angka 0–100 dilewati`:''}${over?`, ${over} baris melebihi jumlah peserta`:''}`);
 });
 let drag = null;
-function dragMark(){ const body = document.getElementById('nilaiBody'); if (!body || !drag) return;
+function dragMark(){ const body = drag && document.getElementById(drag.body); if (!body) { app.querySelectorAll('tr.fillsel').forEach(r => r.classList.remove('fillsel')); return; }
   [...body.rows].forEach((r,i) => r.classList.toggle('fillsel', i >= drag.start && i <= drag.end)); }
 app.addEventListener('pointerdown', e => {
   const fh = e.target.closest('.fh[data-fh]'); if (!fh) return;
   e.preventDefault();
-  const tr = fh.closest('tr'); const el = tr.querySelector('input[data-k]');
-  const v = parseNum(el.value);
-  if (v === null || Number.isNaN(v) || v < 0 || v > 100) { toast('Isi nilai di kotak ini dulu, lalu tarik ke bawah'); return; }
-  drag = {start: +fh.dataset.fh, end: +fh.dataset.fh, v, kid: fh.dataset.k};
+  const body = fh.closest('tbody'); const tr = fh.closest('tr'); const el = fh.parentElement.querySelector('input[data-k]');
+  const pf = fh.dataset.pf || null; const isNumF = !pf || PF_NUM[pf];
+  let v = el.value;
+  if (isNumF) { v = parseNum(v); if (v === null || Number.isNaN(v) || v < 0 || v > 100) { toast('Isi nilai di kotak ini dulu, lalu tarik ke bawah'); return; } }
+  else { v = v.trim(); if (!v) { toast('Isi kotak ini dulu, lalu tarik ke bawah'); return; } }
+  const max = [...body.rows].filter(r => !r.classList.contains('ghost')).length - 1;
+  drag = {start: +fh.dataset.fh, end: +fh.dataset.fh, v, kid: fh.dataset.k, pf, body: body.id, max};
   try { fh.setPointerCapture(e.pointerId); } catch(err){}
   dragMark();
 });
 app.addEventListener('pointermove', e => {
   if (!drag) return;
-  const el = document.elementFromPoint(e.clientX, e.clientY); const tr = el && el.closest && el.closest('#nilaiBody tr');
-  if (tr) { const i = [...tr.parentElement.rows].indexOf(tr); drag.end = Math.max(drag.start, i); dragMark(); }
+  const el = document.elementFromPoint(e.clientX, e.clientY); const tr = el && el.closest && el.closest(`#${drag.body} tr`);
+  if (tr) { const i = [...tr.parentElement.rows].indexOf(tr); drag.end = Math.min(drag.max, Math.max(drag.start, i)); dragMark(); }
   if (e.clientY > window.innerHeight - 40) window.scrollBy(0, 12); else if (e.clientY < 80) window.scrollBy(0, -12);
 });
 function endDrag(){
   if (!drag) return; const d = drag; drag = null;
-  const c = hitung(S.doc); const patch = {nilai:{[d.kid]:{}}};
-  for (let i = d.start; i <= d.end && i < c.rows.length; i++) { patch.nilai[d.kid][c.rows[i].p.id] = d.v; delete S.drafts[`nilai/${d.kid}/${c.rows[i].p.id}`]; }
-  upd(patch);
-  if (d.end > d.start) toast(`Nilai ${fmt(d.v)} disalin ke ${d.end - d.start} peserta di bawahnya`);
+  let n = 0;
+  if (d.pf) {
+    const pes = list(S.doc.peserta); const patch = {peserta:{}};
+    for (let i = d.start; i <= d.end && i < pes.length; i++) { patch.peserta[pes[i].id] = {[d.pf]: d.v}; delete S.drafts[`peserta/${pes[i].id}/${d.pf}`]; n++; }
+    upd(patch);
+  } else {
+    const c = hitung(S.doc); const patch = {nilai:{[d.kid]:{}}};
+    for (let i = d.start; i <= d.end && i < c.rows.length; i++) { patch.nilai[d.kid][c.rows[i].p.id] = d.v; delete S.drafts[`nilai/${d.kid}/${c.rows[i].p.id}`]; n++; }
+    upd(patch);
+  }
+  if (d.end > d.start) toast(`“${typeof d.v === 'number' ? fmt(d.v) : d.v}” disalin ke ${d.end - d.start} baris di bawahnya`);
 }
 app.addEventListener('pointerup', endDrag);
 app.addEventListener('pointercancel', () => { drag = null; dragMark(); render(); });
@@ -918,25 +954,25 @@ async function exportXlsx(){
   const d = S.doc; if (!d) return;
   if (!window.XLSX) { toast('Pembuat file Excel belum termuat. Coba lagi sebentar.'); return; }
   const c = hitung(d); const r2 = n => isNum(n) ? Math.round(n*100)/100 : '';
-  const head = ['No','Nama Lengkap','Asal Instansi','Profesi','Pre Test','Post Test','Progress (%)', ...c.kom.map(k => `${k.kode} ${k.jenis||''}`.trim()), 'Rata-rata Penugasan','Kehadiran (%)','Nilai Akhir','Predikat','Status','Peringkat','Kelengkapan'];
+  const head = ['No','Nama Lengkap','Asal Instansi','Profesi','Pre Test','Post Test','Progress (%)', ...c.kom.map(k => `${k.kode} ${k.jenis||''}`.trim()), 'Rata-rata Penugasan', ...(c.hasPrak?['Rata-rata Praktik']:[]),'Kehadiran (%)','Nilai Akhir','Predikat','Status','Keterangan Status','Peringkat','Kelengkapan'];
   const aoa = [['REKAPITULASI EVALUASI PESERTA'],[d.judul||''],[d.penyelenggara||''],[[d.tanggal?'Tanggal '+d.tanggal:'', d.tempat||''].filter(Boolean).join(', ')],[], head,
-    ...c.rows.map(r => [r.no, r.p.nama, r.p.instansi||'', r.p.profesi||'', r2(r.pre), r2(r.post), r2(r.prog), ...r.vals.map(r2), r2(r.pen), r2(r.had), r2(r.na), r.predikat, r.status, r.rank??'', r.miss?`Kurang ${r.miss} nilai`:'Lengkap'])];
+    ...c.rows.map(r => [r.no, r.p.nama, r.p.instansi||'', r.p.profesi||'', r2(r.pre), r2(r.post), r2(r.prog), ...r.vals.map(r2), r2(r.pen), ...(c.hasPrak?[r2(r.prak)]:[]), r2(r.had), r2(r.na), r.predikat, r.status, r.alasan||'', r.rank??'', r.miss?`Kurang ${r.miss} nilai`:'Lengkap'])];
   aoa.push([]);
-  [['Terendah','min'],['Tertinggi','max'],['Rata-rata','avg']].forEach(([l,k]) => aoa.push(['',l,'','', r2(c.cols.pre[k]), r2(c.cols.post[k]), r2(c.cols.prog[k]), ...c.cols.kom.map(s=>r2(s[k])), r2(c.cols.pen[k]), r2(c.cols.had[k]), r2(c.cols.na[k])]));
+  [['Terendah','min'],['Tertinggi','max'],['Rata-rata','avg']].forEach(([l,k]) => aoa.push(['',l,'','', r2(c.cols.pre[k]), r2(c.cols.post[k]), r2(c.cols.prog[k]), ...c.cols.kom.map(s=>r2(s[k])), r2(c.cols.pen[k]), ...(c.hasPrak?[r2(c.cols.prak[k])]:[]), r2(c.cols.had[k]), r2(c.cols.na[k])]));
   aoa.push([], ['Keterangan mata pelatihan'], ...[...new Map(c.kom.map(k=>[k.kode+'|'+k.nama,k])).values()].map(k => [k.kode, k.nama]));
   const ws1 = XLSX.utils.aoa_to_sheet(aoa);
   ws1['!cols'] = head.map((h,i) => ({wch: i===0?5 : i<4?32 : 12}));
   const nNA = c.cols.na.n;
   const sum = [['RINGKASAN HASIL PENILAIAN'],[d.judul||''],[],
-    ['Jumlah peserta', c.rows.length],['Lulus', c.rows.filter(r=>r.status==='Lulus').length],['Tidak Lulus', c.rows.filter(r=>r.status==='Tidak Lulus').length],['Nilai belum lengkap', c.rows.filter(r=>r.miss).length],[],
-    ['Tanggal', d.tanggal||''],['Bobot nilai akhir', `Post Test ${c.B.post||0}%, Penugasan ${c.B.pen||0}%, Kehadiran ${c.B.had||0}%`],['Nilai minimal lulus', c.lulus],[],
+    ['Jumlah peserta', c.rows.length],['Lulus', c.rows.filter(r=>r.status==='Lulus').length],['Tidak Lulus', c.rows.filter(r=>r.status==='Tidak Lulus').length],['Status belum lengkap', c.rows.filter(r=>r.status==='Belum lengkap').length],['Nilai belum lengkap', c.rows.filter(r=>r.miss).length],[],
+    ['Tanggal', d.tanggal||''],['Bobot nilai akhir', `Post Test ${c.B.post||0}%, Penugasan ${c.B.pen||0}%, Praktik ${c.B.prak||0}%`],['Syarat kelulusan', [['na','Nilai akhir'],['post','Post Test'],['pen','Penugasan'],['prak','Praktik'],['had','Kehadiran (%)']].filter(([x])=>c.syarat[x]!==null).map(([x,l])=>`${l} ≥ ${c.syarat[x]}`).join('; ') || '-'],[],
     ['Distribusi predikat','Rentang nilai akhir','Jumlah','%'], ...c.pred.map((p,i) => [p.label, rentangTxt(c.pred,i), c.dist[i], nNA ? Math.round(c.dist[i]/nNA*1000)/10 : '']).reverse(),[],
     ['Peserta terbaik','Nama','Asal Instansi','Post Test','Rata-rata Penugasan','Nilai Akhir'], ...c.best.map((r,i) => [i+1, r.p.nama, r.p.instansi||'', r2(r.post), r2(r.pen), r2(r.na)]),[],
     ['Komponen','Jenis','Nama Mata Pelatihan','Terendah','Tertinggi','Rata-rata'],
     ['Pre Test','','',r2(c.cols.pre.min),r2(c.cols.pre.max),r2(c.cols.pre.avg)],['Post Test','','',r2(c.cols.post.min),r2(c.cols.post.max),r2(c.cols.post.avg)],
     ['Progress (%)','','',r2(c.cols.prog.min),r2(c.cols.prog.max),r2(c.cols.prog.avg)],
     ...c.kom.map((k,j) => [k.kode, k.jenis||'', k.nama, r2(c.cols.kom[j].min), r2(c.cols.kom[j].max), r2(c.cols.kom[j].avg)]),
-    ['Rata-rata Penugasan','','',r2(c.cols.pen.min),r2(c.cols.pen.max),r2(c.cols.pen.avg)],['Nilai Akhir','','',r2(c.cols.na.min),r2(c.cols.na.max),r2(c.cols.na.avg)]];
+    ['Rata-rata Penugasan','','',r2(c.cols.pen.min),r2(c.cols.pen.max),r2(c.cols.pen.avg)], ...(c.hasPrak?[['Rata-rata Praktik','','',r2(c.cols.prak.min),r2(c.cols.prak.max),r2(c.cols.prak.avg)]]:[]),['Nilai Akhir','','',r2(c.cols.na.min),r2(c.cols.na.max),r2(c.cols.na.avg)]];
   const ws2 = XLSX.utils.aoa_to_sheet(sum); ws2['!cols'] = [{wch:28},{wch:32},{wch:40},{wch:12},{wch:14},{wch:12}];
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws1, 'Rekap'); XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan');
   const name = ('Rekap Nilai - ' + (d.judul||'Pelatihan')).replace(/[\\/:*?"<>|]/g,'').slice(0,90) + '.xlsx';
